@@ -1,0 +1,44 @@
+const path = require('path');
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const config = require('./config/env');
+const errorHandler = require('./middleware/errorHandler');
+
+const authRoutes = require('./routes/auth.routes');
+const productsRoutes = require('./routes/products.routes');
+const cartRoutes = require('./routes/cart.routes');
+const checkoutRoutes = require('./routes/checkout.routes');
+const ordersRoutes = require('./routes/orders.routes');
+const adminRoutes = require('./routes/admin.routes');
+
+const app = express();
+
+app.use(helmet());
+app.use(cors({ origin: config.clientUrl, credentials: true }));
+app.use(cookieParser());
+
+// Stripe webhook needs raw body — must be before express.json()
+app.use('/api/checkout/webhook', express.raw({ type: 'application/json' }));
+app.use(express.json());
+
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productsRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/checkout', checkoutRoutes);
+app.use('/api/orders', ordersRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.use(errorHandler);
+
+module.exports = app;
