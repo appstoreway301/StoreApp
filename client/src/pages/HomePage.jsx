@@ -46,7 +46,6 @@ export default function HomePage() {
   return (
     <div>
       <section className="hero">
-        <ParticleBackground />
         <div className="hero-content">
           <div className="hero-text">
             <img src={logoMonogram} alt="KM" className="hero-monogram" />
@@ -61,7 +60,7 @@ export default function HomePage() {
       </section>
 
       <div id="products" className="products-section">
-      <ParticleBackground variant="subtle" />
+      <ParticleBackground />
       <div className="products-section-inner">
       <h2 className="section-title">Products</h2>
       <div className="category-filters">

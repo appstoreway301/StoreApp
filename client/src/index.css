@@ -324,15 +324,11 @@ a:hover { text-decoration: none; }
 .products-section {
   scroll-margin-top: 80px;
   position: relative;
-  width: 100vw;
-  left: 50%;
-  margin-left: -50vw;
+  margin: 0 -1.5rem;
   padding: 2.5rem 1.5rem 3rem;
   min-height: 400px;
   overflow: hidden;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg);
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #111111 100%);
 }
 .products-section-inner {
   position: relative;
@@ -340,13 +336,49 @@ a:hover { text-decoration: none; }
   max-width: 1200px;
   margin: 0 auto;
 }
-.particle-canvas-subtle {
-  opacity: 0.6;
-  pointer-events: none;
+.products-section .section-title { color: #ffffff; }
+.products-section .btn {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  color: #cccccc;
 }
-[data-theme="dark"] .particle-canvas-subtle {
-  opacity: 0.8;
+.products-section .btn:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.25);
+  color: #ffffff;
 }
+.products-section .btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+.products-section .btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.products-section .price-range label { color: #888888; }
+.products-section .price-range input,
+.products-section .price-range select {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+  color: #f0f0f0;
+}
+.products-section .price-range input:focus,
+.products-section .price-range select:focus { border-color: var(--accent); }
+.products-section .product-card {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.08);
+}
+.products-section .product-card:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+.products-section .product-card-body { color: #f0f0f0; }
+.products-section .product-category { color: #888888; }
+.products-section .product-card-title { color: #ffffff; }
+.products-section .product-card-price { color: #ffffff; }
+.products-section .product-card-img { background: #1a1a1a; }
 .section-title {
   font-size: 1.8rem;
   font-weight: 700;
