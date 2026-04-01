@@ -1,16 +1,22 @@
 const db = require('../db/connection');
 
 const OrderModel = {
-  create(userId, totalCents, items, stripeSessionId) {
+  create(userId, totalCents, items, stripeSessionId, shipping = {}) {
     const insertOrder = db.prepare(
-      'INSERT INTO orders (user_id, total_cents, stripe_session_id) VALUES (?, ?, ?)'
+      `INSERT INTO orders (user_id, total_cents, stripe_session_id, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, shipping_phone)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     );
     const insertItem = db.prepare(
       'INSERT INTO order_items (order_id, product_id, product_name, price_cents, quantity) VALUES (?, ?, ?, ?, ?)'
     );
 
     const createOrder = db.transaction(() => {
-      const { lastInsertRowid } = insertOrder.run(userId, totalCents, stripeSessionId);
+      const { lastInsertRowid } = insertOrder.run(
+        userId, totalCents, stripeSessionId,
+        shipping.name || '', shipping.address || '', shipping.city || '',
+        shipping.state || '', shipping.zip || '', shipping.country || '',
+        shipping.phone || ''
+      );
       for (const item of items) {
         insertItem.run(lastInsertRowid, item.product_id, item.name, item.price_cents, item.quantity);
       }

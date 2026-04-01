@@ -12,7 +12,10 @@
       "Bash(netstat -ano)",
       "Bash(taskkill:*)",
       "Bash(stripe --version)",
-      "Bash(winget install:*)"
+      "Bash(winget install:*)",
+      "Bash(gh auth:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(node --input-type=module -e \":*)"
     ]
   }
 }

@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../api/client';
 import ProductCard from '../components/ProductCard';
+import ParticleBackground from '../components/ParticleBackground';
+import gorilaImg from '../assets/gorila.png';
+import logoMonogram from '../assets/Frente.png';
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -42,7 +45,25 @@ export default function HomePage() {
 
   return (
     <div>
-      <h1>Products</h1>
+      <section className="hero">
+        <ParticleBackground />
+        <div className="hero-content">
+          <div className="hero-text">
+            <img src={logoMonogram} alt="KM" className="hero-monogram" />
+            <h1 className="hero-title">Kong Montoya</h1>
+            <p className="hero-subtitle">Streetwear with attitude. Unleash your style.</p>
+            <a href="#products" className="btn btn-primary btn-lg">Shop Now</a>
+          </div>
+          <div className="hero-image">
+            <img src={gorilaImg} alt="Kong Montoya mascot" />
+          </div>
+        </div>
+      </section>
+
+      <div id="products" className="products-section">
+      <ParticleBackground variant="subtle" />
+      <div className="products-section-inner">
+      <h2 className="section-title">Products</h2>
       <div className="category-filters">
         <button
           className={`btn ${!categoryId ? 'btn-primary' : ''}`}
@@ -110,6 +131,8 @@ export default function HomePage() {
           ))}
         </div>
       )}
+      </div>
+      </div>
     </div>
 );
 }

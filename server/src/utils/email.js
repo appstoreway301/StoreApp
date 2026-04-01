@@ -35,7 +35,7 @@ async function sendVerificationEmail(to, token) {
   }
 }
 
-async function sendOrderNotification({ order, items, customerEmail }) {
+async function sendOrderNotification({ order, items, customerEmail, shipping }) {
   const sellerEmail = process.env.SMTP_FROM || 'onboarding@resend.dev';
 
   const itemRows = items.map(item =>
@@ -47,11 +47,25 @@ async function sendOrderNotification({ order, items, customerEmail }) {
     </tr>`
   ).join('');
 
+  const shippingHtml = shipping && shipping.name ? `
+    <h3>Shipping Address</h3>
+    <p style="margin:0;line-height:1.6;">
+      <strong>${shipping.name}</strong><br>
+      ${shipping.address}<br>
+      ${shipping.city}, ${shipping.state} ${shipping.zip}<br>
+      ${shipping.country}<br>
+      ${shipping.phone ? `Phone: ${shipping.phone}` : ''}
+    </p>
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+  ` : '';
+
   const html = `
     <h2>New Order #${order.id}</h2>
     <p><strong>Customer:</strong> ${customerEmail}</p>
     <p><strong>Date:</strong> ${order.created_at}</p>
     <p><strong>Status:</strong> ${order.status}</p>
+    <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+    ${shippingHtml}
     <table style="border-collapse:collapse;width:100%;">
       <thead>
         <tr style="background:#f4f4f4;">

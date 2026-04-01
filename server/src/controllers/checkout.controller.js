@@ -12,6 +12,11 @@ async function createSession(req, res, next) {
       return res.status(503).json({ error: 'Payment service not configured' });
     }
 
+    const { shipping } = req.body;
+    if (!shipping || !shipping.name || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.country) {
+      return res.status(400).json({ error: 'Shipping address is required' });
+    }
+
     const cartItems = CartModel.getByUserId(req.userId);
     if (cartItems.length === 0) {
       return res.status(400).json({ error: 'Cart is empty' });
@@ -46,8 +51,7 @@ async function createSession(req, res, next) {
       quantity: item.quantity,
     }));
 
-    OrderModel.create(req.userId, totalCents, orderItems, session.id);
-    CartModel.clearCart(req.userId);
+    OrderModel.create(req.userId, totalCents, orderItems, session.id, shipping);
 
     res.json({ url: session.url });
   } catch (err) {
@@ -81,14 +85,27 @@ async function handleWebhook(req, res, next) {
         for (const item of items) {
           ProductModel.reduceStock(item.product_id, item.quantity);
         }
+        CartModel.clearCart(order.user_id);
         const user = UserModel.findById(order.user_id);
         sendOrderNotification({
           order,
           items,
           customerEmail: user?.email || 'Unknown',
+          shipping: {
+            name: order.shipping_name,
+            address: order.shipping_address,
+            city: order.shipping_city,
+            state: order.shipping_state,
+            zip: order.shipping_zip,
+            country: order.shipping_country,
+            phone: order.shipping_phone,
+          },
         }).catch(err => console.error('Failed to send order notification:', err.message));
       }
     } else if (event.type === 'checkout.session.expired') {
+      const session = event.data.object;
+      OrderModel.updateStatus(session.id, 'failed', null);
+    } else if (event.type === 'checkout.session.async_payment_failed') {
       const session = event.data.object;
       OrderModel.updateStatus(session.id, 'failed', null);
     }

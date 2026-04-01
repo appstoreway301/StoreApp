@@ -97,6 +97,19 @@ function migrate() {
     console.log('Added role column to users table.');
   }
 
+  // Add shipping address columns to orders if they don't exist
+  const orderCols = db.prepare("PRAGMA table_info(orders)").all();
+  if (!orderCols.find(c => c.name === 'shipping_name')) {
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_name TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_address TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_city TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_state TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_zip TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_country TEXT DEFAULT ''");
+    db.exec("ALTER TABLE orders ADD COLUMN shipping_phone TEXT DEFAULT ''");
+    console.log('Added shipping address columns to orders table.');
+  }
+
   console.log('Database migrations completed.');
 }
 
