@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const isTunnel = window.location.hostname.includes('trycloudflare.com');
+const BACKEND_TUNNEL = import.meta.env.VITE_BACKEND_URL || '';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: isTunnel && BACKEND_TUNNEL ? `${BACKEND_TUNNEL}/api` : '/api',
 });
 
 api.interceptors.request.use((config) => {

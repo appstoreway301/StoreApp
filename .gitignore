@@ -1,5 +1,16 @@
 node_modules/
 dist/
 .env
-server/data/store.db
 *.log
+
+# Database
+server/data/store.db
+server/data/store.db-shm
+server/data/store.db-wal
+
+# Uploads
+server/uploads/
+
+# Local configs
+.mcp.json
+.playwright-mcp/

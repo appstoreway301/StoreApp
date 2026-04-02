@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
@@ -17,7 +18,7 @@ export default function ProductCard({ product }) {
 
   return (
     <Link to={`/products/${product.id}`} className="product-card">
-      <img src={product.image_url} alt={product.name} className="product-card-img" />
+      <img src={resolveImageUrl(product.image_url)} alt={product.name} className="product-card-img" />
       <div className="product-card-body">
         <div className="tags-display">
           {cats.map(c => (

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api/client';
 import { useCart } from '../context/CartContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 
 export default function ProductPage() {
   const { id } = useParams();
@@ -38,7 +39,7 @@ export default function ProductPage() {
   const allImages = [
     product.image_url,
     ...(product.images || []).map(img => img.image_url),
-  ].filter(Boolean);
+  ].filter(Boolean).map(resolveImageUrl);
 
   return (
     <div className="product-detail">

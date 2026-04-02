@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const { Router } = require('express');
 const multer = require('multer');
 const authenticate = require('../middleware/auth');
@@ -7,8 +8,13 @@ const controller = require('../controllers/admin.controller');
 
 const router = Router();
 
+const uploadsDir = path.join(__dirname, '../../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../uploads'),
+  destination: uploadsDir,
   filename(req, file, cb) {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
@@ -46,12 +52,18 @@ router.delete('/categories/:id', controller.deleteCategory);
 
 router.get('/stock', controller.getStockDashboard);
 
-router.post('/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No image file provided' });
-  }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ image_url: imageUrl });
+router.post('/upload', (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('Upload error:', err.message);
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+    const imageUrl = `/uploads/${req.file.filename}`;
+    res.json({ image_url: imageUrl });
+  });
 });
 
 module.exports = router;

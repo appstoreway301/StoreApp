@@ -1,4 +1,5 @@
 import { useCart } from '../context/CartContext';
+import { resolveImageUrl } from '../utils/imageUrl';
 
 export default function CartItem({ item }) {
   const { updateQuantity, removeItem } = useCart();
@@ -9,7 +10,7 @@ export default function CartItem({ item }) {
 
   return (
     <div className="cart-item">
-      <img src={item.image_url} alt={item.name} className="cart-item-img" />
+      <img src={resolveImageUrl(item.image_url)} alt={item.name} className="cart-item-img" />
       <div className="cart-item-info">
         <h4>{item.name}</h4>
         <p className="cart-item-price">{formatPrice(item.price_cents)}</p>
@@ -39,6 +40,8 @@ export default function CartItem({ item }) {
       <div className="cart-item-total">
         {formatPrice(item.price_cents * item.quantity)}
       </div>
+      
     </div>
+    
   );
 }

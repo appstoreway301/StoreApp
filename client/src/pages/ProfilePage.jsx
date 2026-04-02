@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef(null);
 
   // Change password
   const [showPassword, setShowPassword] = useState(false);
@@ -86,6 +88,41 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleAvatarUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const { data: uploadData } = await api.post('/auth/avatar/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const { data } = await api.put('/auth/avatar', { avatar_url: uploadData.image_url });
+      setProfile(data.user);
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      stored.avatar_url = data.user.avatar_url;
+      localStorage.setItem('user', JSON.stringify(stored));
+      window.location.reload();
+    } catch {
+      // ignore
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
+
+  async function handleRemoveAvatar() {
+    try {
+      const { data } = await api.put('/auth/avatar', { avatar_url: null });
+      setProfile(data.user);
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      stored.avatar_url = null;
+      localStorage.setItem('user', JSON.stringify(stored));
+      window.location.reload();
+    } catch {}
+  }
+
   if (loading) return <div className="loading">Loading...</div>;
   if (!profile) return <div className="alert alert-error">Failed to load profile</div>;
 
@@ -103,12 +140,38 @@ export default function ProfilePage() {
       <h1>My Profile</h1>
 
       <div className="profile-card">
-        <div className="profile-avatar">
-          {profile.name.charAt(0).toUpperCase()}
+        <div className="profile-avatar-wrap" onClick={() => avatarInputRef.current?.click()}>
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.name} className="profile-avatar-img" />
+          ) : (
+            <div className="profile-avatar">
+              {profile.name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="profile-avatar-overlay">
+            {avatarUploading ? '...' : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            )}
+          </div>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleAvatarUpload}
+            style={{ display: 'none' }}
+          />
         </div>
         <div className="profile-info">
           <h2>{profile.name}</h2>
           <p className="profile-role">{profile.role === 'admin' ? 'Administrator' : 'Customer'}</p>
+          {profile.avatar_url && (
+            <button className="btn btn-sm btn-danger" onClick={handleRemoveAvatar} style={{ marginTop: '0.5rem' }}>
+              Remove photo
+            </button>
+          )}
         </div>
       </div>
 

@@ -14,7 +14,7 @@ const UserModel = {
   },
 
   findById(id) {
-    return db.prepare('SELECT id, email, name, role, email_verified, created_at FROM users WHERE id = ?').get(id);
+    return db.prepare('SELECT id, email, name, role, email_verified, avatar_url, created_at FROM users WHERE id = ?').get(id);
   },
 
   verifyEmail(token) {
@@ -51,6 +51,12 @@ const UserModel = {
     db.prepare(
       'UPDATE users SET email = ?, updated_at = datetime(\'now\') WHERE id = ?'
     ).run(email, userId);
+  },
+
+  updateAvatar(userId, avatarUrl) {
+    db.prepare(
+      'UPDATE users SET avatar_url = ?, updated_at = datetime(\'now\') WHERE id = ?'
+    ).run(avatarUrl, userId);
   },
 };
 

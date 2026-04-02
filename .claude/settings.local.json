@@ -15,7 +15,16 @@
       "Bash(winget install:*)",
       "Bash(gh auth:*)",
       "Bash(npm uninstall:*)",
-      "Bash(node --input-type=module -e \":*)"
+      "Bash(node --input-type=module -e \":*)",
+      "Bash(cloudflared --version)",
+      "Bash(ls C:/Users/SergioBland/Desktop/StoreApp/client/.env*)",
+      "Bash(claude mcp:*)",
+      "Bash(claude.cmd mcp:*)",
+      "Bash(npx @anthropic-ai/claude-code mcp add playwright -- npx @playwright/mcp@latest)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
 }

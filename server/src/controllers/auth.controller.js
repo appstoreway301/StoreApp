@@ -100,7 +100,7 @@ async function login(req, res, next) {
     res.json({
       accessToken,
       refreshToken,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, avatar_url: user.avatar_url || null },
     });
   } catch (err) {
     next(err);
@@ -211,4 +211,15 @@ async function changeEmail(req, res, next) {
   }
 }
 
-module.exports = { sendVerification, verifyEmail, register, login, refresh, logout, getMe, changePassword, changeEmail };
+function updateAvatar(req, res, next) {
+  try {
+    const { avatar_url } = req.body;
+    UserModel.updateAvatar(req.userId, avatar_url || null);
+    const user = UserModel.findById(req.userId);
+    res.json({ user });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { sendVerification, verifyEmail, register, login, refresh, logout, getMe, changePassword, changeEmail, updateAvatar };

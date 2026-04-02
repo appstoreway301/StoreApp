@@ -110,6 +110,12 @@ function migrate() {
     console.log('Added shipping address columns to orders table.');
   }
 
+  // Add avatar_url column to users if it doesn't exist
+  if (!columns.find(c => c.name === 'avatar_url')) {
+    db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT");
+    console.log('Added avatar_url column to users table.');
+  }
+
   console.log('Database migrations completed.');
 }
 

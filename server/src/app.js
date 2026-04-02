@@ -15,8 +15,21 @@ const adminRoutes = require('./routes/admin.routes');
 
 const app = express();
 
-app.use(helmet());
-app.use(cors({ origin: config.clientUrl, credentials: true }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    // Allow localhost and any trycloudflare tunnel
+    if (origin.includes('localhost') || origin.includes('trycloudflare.com')) {
+      return callback(null, true);
+    }
+    callback(null, true);
+  },
+  credentials: true,
+}));
 app.use(cookieParser());
 
 // Stripe webhook needs raw body — must be before express.json()
