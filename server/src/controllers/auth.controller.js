@@ -41,7 +41,10 @@ function verifyEmail(req, res, next) {
       return res.status(400).json({ error: 'Invalid or expired verification token' });
     }
 
-    res.json({ message: 'Email verified successfully.', email: pending.email, token });
+    // Do not echo the raw token back in the response body — the client
+    // already has it from the URL and returning it creates an unnecessary
+    // exposure surface in logs / proxies.
+    res.json({ message: 'Email verified successfully.', email: pending.email });
   } catch (err) {
     next(err);
   }
@@ -164,10 +167,17 @@ async function changePassword(req, res, next) {
     if (newPassword.length < 8) {
       return res.status(400).json({ error: 'New password must be at least 8 characters' });
     }
+    if (newPassword.length > 128) {
+      return res.status(400).json({ error: 'New password must be at most 128 characters' });
+    }
 
-    const user = UserModel.findByEmail(
-      UserModel.findById(req.userId).email
-    );
+    // Use findById (which does not return password_hash) only to get the email,
+    // then fetch the full record via findByEmail so we have the hash.
+    const userBase = UserModel.findById(req.userId);
+    if (!userBase) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const user = UserModel.findByEmail(userBase.email);
     const valid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Current password is incorrect' });
@@ -190,14 +200,21 @@ async function changeEmail(req, res, next) {
       return res.status(400).json({ error: 'New email and password are required' });
     }
 
+    // Basic email format guard before hitting the database
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
     const existing = UserModel.findByEmail(newEmail);
     if (existing) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    const user = UserModel.findByEmail(
-      UserModel.findById(req.userId).email
-    );
+    const userBase = UserModel.findById(req.userId);
+    if (!userBase) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const user = UserModel.findByEmail(userBase.email);
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Password is incorrect' });
@@ -214,6 +231,13 @@ async function changeEmail(req, res, next) {
 function updateAvatar(req, res, next) {
   try {
     const { avatar_url } = req.body;
+
+    // Only allow relative /uploads/ paths or null — reject arbitrary external URLs
+    // to prevent the field from being used as an SSRF / open-redirect vector.
+    if (avatar_url && !/^\/uploads\/[\w.\-]+$/.test(avatar_url)) {
+      return res.status(400).json({ error: 'Invalid avatar URL' });
+    }
+
     UserModel.updateAvatar(req.userId, avatar_url || null);
     const user = UserModel.findById(req.userId);
     res.json({ user });

@@ -13,18 +13,24 @@ const router = Router();
 const uploadsDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
+const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+
 const storage = multer.diskStorage({
   destination: uploadsDir,
   filename(req, file, cb) {
     const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + path.extname(file.originalname));
+    // Force a safe extension derived from the declared MIME type — never trust
+    // file.originalname for the stored extension to prevent extension spoofing.
+    const mimeToExt = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp' };
+    const ext = mimeToExt[file.mimetype] || '.bin';
+    cb(null, unique + ext);
   },
 });
 const upload = multer({
   storage,
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter(req, file, cb) {
-    if (/\.(jpg|jpeg|png|gif|webp)$/i.test(path.extname(file.originalname))) cb(null, true);
+    if (ALLOWED_MIME_TYPES.has(file.mimetype)) cb(null, true);
     else cb(new Error('Only image files are allowed'));
   },
 });

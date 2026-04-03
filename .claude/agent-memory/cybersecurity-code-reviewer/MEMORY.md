@@ -1,0 +1,1 @@
+- [StoreApp Security Patterns](project_security_patterns.md) — Security libs, safe patterns confirmed, and all vulnerabilities found/fixed in the 2026-04-02 audit

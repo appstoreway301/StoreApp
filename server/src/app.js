@@ -18,15 +18,18 @@ const app = express();
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+const ALLOWED_ORIGINS = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
+];
+
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, curl, etc)
+    // Allow requests with no origin (same-origin, mobile apps, curl in dev)
     if (!origin) return callback(null, true);
-    // Allow localhost and any trycloudflare tunnel
-    if (origin.includes('localhost') || origin.includes('trycloudflare.com')) {
-      return callback(null, true);
-    }
-    callback(null, true);
+    const allowed = ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
+    if (allowed) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
 }));

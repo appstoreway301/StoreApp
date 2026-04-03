@@ -22,6 +22,17 @@ async function createSession(req, res, next) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
+    // Validate that every item still has sufficient stock before
+    // creating the Stripe session. Cart prices come from the DB JOIN
+    // (not from the client), so they are already server-authoritative.
+    for (const item of cartItems) {
+      if (item.stock < item.quantity) {
+        return res.status(400).json({
+          error: `Insufficient stock for "${item.name}". Available: ${item.stock}`,
+        });
+      }
+    }
+
     const totalCents = cartItems.reduce(
       (sum, item) => sum + item.price_cents * item.quantity, 0
     );

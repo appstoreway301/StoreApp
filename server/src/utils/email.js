@@ -1,6 +1,17 @@
 const nodemailer = require('nodemailer');
 const config = require('../config/env');
 
+// Escape HTML special characters to prevent XSS in email templates.
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
 let transporter = null;
 
 if (process.env.SMTP_HOST) {
@@ -40,8 +51,8 @@ async function sendOrderNotification({ order, items, customerEmail, shipping }) 
 
   const itemRows = items.map(item =>
     `<tr>
-      <td style="padding:8px;border:1px solid #ddd;">${item.product_name}</td>
-      <td style="padding:8px;border:1px solid #ddd;text-align:center;">${item.quantity}</td>
+      <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.product_name)}</td>
+      <td style="padding:8px;border:1px solid #ddd;text-align:center;">${escHtml(item.quantity)}</td>
       <td style="padding:8px;border:1px solid #ddd;text-align:right;">$${(item.price_cents / 100).toFixed(2)}</td>
       <td style="padding:8px;border:1px solid #ddd;text-align:right;">$${((item.price_cents * item.quantity) / 100).toFixed(2)}</td>
     </tr>`
@@ -50,20 +61,20 @@ async function sendOrderNotification({ order, items, customerEmail, shipping }) 
   const shippingHtml = shipping && shipping.name ? `
     <h3>Shipping Address</h3>
     <p style="margin:0;line-height:1.6;">
-      <strong>${shipping.name}</strong><br>
-      ${shipping.address}<br>
-      ${shipping.city}, ${shipping.state} ${shipping.zip}<br>
-      ${shipping.country}<br>
-      ${shipping.phone ? `Phone: ${shipping.phone}` : ''}
+      <strong>${escHtml(shipping.name)}</strong><br>
+      ${escHtml(shipping.address)}<br>
+      ${escHtml(shipping.city)}, ${escHtml(shipping.state)} ${escHtml(shipping.zip)}<br>
+      ${escHtml(shipping.country)}<br>
+      ${shipping.phone ? `Phone: ${escHtml(shipping.phone)}` : ''}
     </p>
     <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
   ` : '';
 
   const html = `
-    <h2>New Order #${order.id}</h2>
-    <p><strong>Customer:</strong> ${customerEmail}</p>
-    <p><strong>Date:</strong> ${order.created_at}</p>
-    <p><strong>Status:</strong> ${order.status}</p>
+    <h2>New Order #${escHtml(order.id)}</h2>
+    <p><strong>Customer:</strong> ${escHtml(customerEmail)}</p>
+    <p><strong>Date:</strong> ${escHtml(order.created_at)}</p>
+    <p><strong>Status:</strong> ${escHtml(order.status)}</p>
     <hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
     ${shippingHtml}
     <table style="border-collapse:collapse;width:100%;">

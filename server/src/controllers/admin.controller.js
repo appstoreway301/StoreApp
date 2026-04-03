@@ -22,8 +22,21 @@ function getProducts(req, res, next) {
 function createProduct(req, res, next) {
   try {
     const { name, description, price_cents, image_url, category, stock, category_ids } = req.body;
+
+    // Server-side validation — these fields come from an admin UI but must
+    // still be sanitized to avoid storing garbage or triggering DB errors.
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Product name is required' });
+    }
+    if (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0) {
+      return res.status(400).json({ error: 'price_cents must be a non-negative integer' });
+    }
+    if (stock !== undefined && (typeof stock !== 'number' || !Number.isInteger(stock) || stock < 0)) {
+      return res.status(400).json({ error: 'stock must be a non-negative integer' });
+    }
+
     const id = ProductModel.create({
-      name,
+      name: name.trim(),
       description: description || '',
       priceCents: price_cents,
       imageUrl: image_url || '',
@@ -57,6 +70,13 @@ function updateProduct(req, res, next) {
     }
 
     const { name, description, price_cents, image_url, category, stock, active, category_ids } = req.body;
+
+    if (price_cents !== undefined && (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0)) {
+      return res.status(400).json({ error: 'price_cents must be a non-negative integer' });
+    }
+    if (stock !== undefined && (typeof stock !== 'number' || !Number.isInteger(stock) || stock < 0)) {
+      return res.status(400).json({ error: 'stock must be a non-negative integer' });
+    }
     ProductModel.update(id, {
       name: name ?? existing.name,
       description: description ?? existing.description,

@@ -26,5 +26,19 @@
   "enabledMcpjsonServers": [
     "playwright"
   ],
-  "enableAllProjectMcpServers": true
+  "enableAllProjectMcpServers": true,
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/read_hook.js"
+          }
+        ]
+      }
+    ]
+  }
 }
