@@ -1,28 +1,30 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
 const PendingVerificationModel = {
-  create({ email, token, expiresAt }) {
-    // Remove any existing pending verification for this email
-    db.prepare('DELETE FROM pending_verifications WHERE email = ?').run(email);
-
-    const stmt = db.prepare(
-      'INSERT INTO pending_verifications (email, token, expires_at) VALUES (?, ?, ?)'
+  async create({ email, token, expiresAt }) {
+    // Limpiar verificaciones expiradas de todos los usuarios
+    await pool.query('DELETE FROM pending_verifications WHERE expires_at <= NOW()');
+    await pool.query('DELETE FROM pending_verifications WHERE email = $1', [email]);
+    await pool.query(
+      'INSERT INTO pending_verifications (email, token, expires_at) VALUES ($1, $2, $3)',
+      [email, token, expiresAt]
     );
-    return stmt.run(email, token, expiresAt);
   },
 
-  findByToken(token) {
-    return db.prepare(
-      'SELECT * FROM pending_verifications WHERE token = ? AND expires_at > datetime(\'now\')'
-    ).get(token);
+  async findByToken(token) {
+    const { rows } = await pool.query(
+      'SELECT * FROM pending_verifications WHERE token = $1 AND expires_at > NOW()',
+      [token]
+    );
+    return rows[0] || null;
   },
 
-  deleteByToken(token) {
-    db.prepare('DELETE FROM pending_verifications WHERE token = ?').run(token);
+  async deleteByToken(token) {
+    await pool.query('DELETE FROM pending_verifications WHERE token = $1', [token]);
   },
 
-  deleteExpired() {
-    db.prepare('DELETE FROM pending_verifications WHERE expires_at <= datetime(\'now\')').run();
+  async deleteExpired() {
+    await pool.query('DELETE FROM pending_verifications WHERE expires_at <= NOW()');
   },
 };
 

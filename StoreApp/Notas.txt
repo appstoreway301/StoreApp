@@ -1,0 +1,2 @@
+Comando para eliminar a un usuario junto con toda su informacion. 
+node C:\Users\SergioBland\Desktop\StoreApp\server\src\db\delete-user.js fambland@gmail.com 

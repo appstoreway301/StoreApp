@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
+import { useCart } from '../context/CartContext';
 
 export default function CheckoutSuccessPage() {
   const [searchParams] = useSearchParams();
+  const { clearCart } = useCart();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +19,12 @@ export default function CheckoutSuccessPage() {
     }
 
     api.get(`/checkout/verify?sessionId=${sessionId}`)
-      .then(({ data }) => setOrder(data.order))
+      .then(({ data }) => {
+        setOrder(data.order);
+        if (data.order?.status === 'paid') {
+          clearCart();
+        }
+      })
       .catch(err => setError(err.response?.data?.error || 'Could not verify payment'))
       .finally(() => setLoading(false));
   }, [searchParams]);

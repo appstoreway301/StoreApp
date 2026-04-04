@@ -17,14 +17,11 @@ async function createSession(req, res, next) {
       return res.status(400).json({ error: 'Shipping address is required' });
     }
 
-    const cartItems = CartModel.getByUserId(req.userId);
+    const cartItems = await CartModel.getByUserId(req.userId);
     if (cartItems.length === 0) {
       return res.status(400).json({ error: 'Cart is empty' });
     }
 
-    // Validate that every item still has sufficient stock before
-    // creating the Stripe session. Cart prices come from the DB JOIN
-    // (not from the client), so they are already server-authoritative.
     for (const item of cartItems) {
       if (item.stock < item.quantity) {
         return res.status(400).json({
@@ -62,12 +59,41 @@ async function createSession(req, res, next) {
       quantity: item.quantity,
     }));
 
-    OrderModel.create(req.userId, totalCents, orderItems, session.id, shipping);
+    await OrderModel.create(req.userId, totalCents, orderItems, session.id, shipping);
 
     res.json({ url: session.url });
   } catch (err) {
     next(err);
   }
+}
+
+// Lógica de post-pago compartida entre webhook y verifySession.
+// markProcessed garantiza que solo se ejecuta una vez por orden.
+async function processOrder(order) {
+  const locked = await OrderModel.markProcessed(order.id);
+  if (!locked) return; // Ya fue procesada por el otro flujo
+
+  const items = await OrderModel.findItemsByOrderId(order.id);
+  for (const item of items) {
+    await ProductModel.reduceStock(item.product_id, item.quantity);
+  }
+  await CartModel.clearCart(order.user_id);
+
+  const user = await UserModel.findById(order.user_id);
+  sendOrderNotification({
+    order,
+    items,
+    customerEmail: user?.email || 'Unknown',
+    shipping: {
+      name: order.shipping_name,
+      address: order.shipping_address,
+      city: order.shipping_city,
+      state: order.shipping_state,
+      zip: order.shipping_zip,
+      country: order.shipping_country,
+      phone: order.shipping_phone,
+    },
+  }).catch(err => console.error('Failed to send order notification:', err.message));
 }
 
 async function handleWebhook(req, res, next) {
@@ -88,37 +114,18 @@ async function handleWebhook(req, res, next) {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
-      OrderModel.updateStatus(session.id, 'paid', session.payment_intent);
+      await OrderModel.updateStatus(session.id, 'paid', session.payment_intent);
 
-      const order = OrderModel.findByStripeSessionId(session.id);
+      const order = await OrderModel.findByStripeSessionId(session.id);
       if (order) {
-        const items = OrderModel.findItemsByOrderId(order.id);
-        for (const item of items) {
-          ProductModel.reduceStock(item.product_id, item.quantity);
-        }
-        CartModel.clearCart(order.user_id);
-        const user = UserModel.findById(order.user_id);
-        sendOrderNotification({
-          order,
-          items,
-          customerEmail: user?.email || 'Unknown',
-          shipping: {
-            name: order.shipping_name,
-            address: order.shipping_address,
-            city: order.shipping_city,
-            state: order.shipping_state,
-            zip: order.shipping_zip,
-            country: order.shipping_country,
-            phone: order.shipping_phone,
-          },
-        }).catch(err => console.error('Failed to send order notification:', err.message));
+        await processOrder(order);
       }
     } else if (event.type === 'checkout.session.expired') {
       const session = event.data.object;
-      OrderModel.updateStatus(session.id, 'failed', null);
+      await OrderModel.updateStatus(session.id, 'failed', null);
     } else if (event.type === 'checkout.session.async_payment_failed') {
       const session = event.data.object;
-      OrderModel.updateStatus(session.id, 'failed', null);
+      await OrderModel.updateStatus(session.id, 'failed', null);
     }
 
     res.json({ received: true });
@@ -138,7 +145,7 @@ async function verifySession(req, res, next) {
       return res.status(400).json({ error: 'Session ID is required' });
     }
 
-    const order = OrderModel.findByStripeSessionId(sessionId);
+    const order = await OrderModel.findByStripeSessionId(sessionId);
     if (!order || order.user_id !== req.userId) {
       return res.status(404).json({ error: 'Order not found' });
     }
@@ -146,12 +153,13 @@ async function verifySession(req, res, next) {
     if (order.status === 'pending') {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
       if (session.payment_status === 'paid') {
-        OrderModel.updateStatus(sessionId, 'paid', session.payment_intent);
+        await OrderModel.updateStatus(sessionId, 'paid', session.payment_intent);
         order.status = 'paid';
+        await processOrder(order);
       }
     }
 
-    const items = OrderModel.findItemsByOrderId(order.id);
+    const items = await OrderModel.findItemsByOrderId(order.id);
     res.json({ order: { ...order, items } });
   } catch (err) {
     next(err);

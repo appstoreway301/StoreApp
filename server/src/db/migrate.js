@@ -1,120 +1,108 @@
-const db = require('./connection');
+const pool = require('./connection');
 
-function migrate() {
-  db.exec(`
+async function migrate() {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       name TEXT NOT NULL,
       role TEXT NOT NULL DEFAULT 'customer',
-      email_verified INTEGER NOT NULL DEFAULT 0,
+      email_verified BOOLEAN NOT NULL DEFAULT FALSE,
       verification_token TEXT,
       refresh_token TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      avatar_url TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT,
       price_cents INTEGER NOT NULL,
       image_url TEXT,
       category TEXT,
       stock INTEGER NOT NULL DEFAULT 0,
-      active INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS cart_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      product_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       quantity INTEGER NOT NULL DEFAULT 1,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       UNIQUE(user_id, product_id)
     );
 
     CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id),
       stripe_session_id TEXT UNIQUE,
       stripe_payment_intent TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       total_cents INTEGER NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id)
+      shipping_name TEXT DEFAULT '',
+      shipping_address TEXT DEFAULT '',
+      shipping_city TEXT DEFAULT '',
+      shipping_state TEXT DEFAULT '',
+      shipping_zip TEXT DEFAULT '',
+      shipping_country TEXT DEFAULT '',
+      shipping_phone TEXT DEFAULT '',
+      processed BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS order_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      order_id INTEGER NOT NULL,
-      product_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id),
       product_name TEXT NOT NULL,
       price_cents INTEGER NOT NULL,
-      quantity INTEGER NOT NULL,
-      FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(id)
+      quantity INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       name TEXT NOT NULL UNIQUE
     );
 
     CREATE TABLE IF NOT EXISTS product_categories (
-      product_id INTEGER NOT NULL,
-      category_id INTEGER NOT NULL,
-      PRIMARY KEY (product_id, category_id),
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+      PRIMARY KEY (product_id, category_id)
     );
 
     CREATE TABLE IF NOT EXISTS product_images (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_id INTEGER NOT NULL,
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
       image_url TEXT NOT NULL,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      sort_order INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS pending_verifications (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       email TEXT NOT NULL,
       token TEXT NOT NULL UNIQUE,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
   `);
 
-  // Add role column if it doesn't exist (migration for existing DBs)
-  const columns = db.prepare("PRAGMA table_info(users)").all();
-  if (!columns.find(c => c.name === 'role')) {
-    db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'");
-    console.log('Added role column to users table.');
-  }
-
-  // Add shipping address columns to orders if they don't exist
-  const orderCols = db.prepare("PRAGMA table_info(orders)").all();
-  if (!orderCols.find(c => c.name === 'shipping_name')) {
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_name TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_address TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_city TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_state TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_zip TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_country TEXT DEFAULT ''");
-    db.exec("ALTER TABLE orders ADD COLUMN shipping_phone TEXT DEFAULT ''");
-    console.log('Added shipping address columns to orders table.');
-  }
-
-  // Add avatar_url column to users if it doesn't exist
-  if (!columns.find(c => c.name === 'avatar_url')) {
-    db.exec("ALTER TABLE users ADD COLUMN avatar_url TEXT");
-    console.log('Added avatar_url column to users table.');
-  }
+  // Migración: agregar columna processed a orders si no existe
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'orders' AND column_name = 'processed'
+      ) THEN
+        ALTER TABLE orders ADD COLUMN processed BOOLEAN NOT NULL DEFAULT FALSE;
+      END IF;
+    END $$;
+  `);
 
   console.log('Database migrations completed.');
 }

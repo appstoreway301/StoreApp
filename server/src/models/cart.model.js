@@ -1,40 +1,47 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
 const CartModel = {
-  getByUserId(userId) {
-    return db.prepare(`
+  async getByUserId(userId) {
+    const { rows } = await pool.query(`
       SELECT ci.id, ci.product_id, ci.quantity,
              p.name, p.price_cents, p.image_url, p.stock
       FROM cart_items ci
       JOIN products p ON p.id = ci.product_id
-      WHERE ci.user_id = ? AND p.active = 1
+      WHERE ci.user_id = $1 AND p.active = TRUE
       ORDER BY ci.created_at ASC
-    `).all(userId);
+    `, [userId]);
+    return rows;
   },
 
-  addItem(userId, productId, quantity) {
-    return db.prepare(`
+  async addItem(userId, productId, quantity) {
+    const { rowCount } = await pool.query(`
       INSERT INTO cart_items (user_id, product_id, quantity)
-      VALUES (?, ?, ?)
+      VALUES ($1, $2, $3)
       ON CONFLICT(user_id, product_id)
-      DO UPDATE SET quantity = quantity + excluded.quantity
-    `).run(userId, productId, quantity);
+      DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity
+    `, [userId, productId, quantity]);
+    return { changes: rowCount };
   },
 
-  updateQuantity(itemId, userId, quantity) {
-    return db.prepare(
-      'UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?'
-    ).run(quantity, itemId, userId);
+  async updateQuantity(itemId, userId, quantity) {
+    const { rowCount } = await pool.query(
+      'UPDATE cart_items SET quantity = $1 WHERE id = $2 AND user_id = $3',
+      [quantity, itemId, userId]
+    );
+    return { changes: rowCount };
   },
 
-  removeItem(itemId, userId) {
-    return db.prepare(
-      'DELETE FROM cart_items WHERE id = ? AND user_id = ?'
-    ).run(itemId, userId);
+  async removeItem(itemId, userId) {
+    const { rowCount } = await pool.query(
+      'DELETE FROM cart_items WHERE id = $1 AND user_id = $2',
+      [itemId, userId]
+    );
+    return { changes: rowCount };
   },
 
-  clearCart(userId) {
-    return db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(userId);
+  async clearCart(userId) {
+    const { rowCount } = await pool.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
+    return { changes: rowCount };
   },
 };
 

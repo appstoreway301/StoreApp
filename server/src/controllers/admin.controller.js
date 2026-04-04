@@ -1,17 +1,22 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 const ProductModel = require('../models/product.model');
 const ProductImageModel = require('../models/product-image.model');
 const CategoryModel = require('../models/category.model');
 
 // --- Products ---
 
-function getProducts(req, res, next) {
+async function getProducts(req, res, next) {
   try {
-    const products = ProductModel.findAllAdmin();
+    const products = await ProductModel.findAllAdmin();
+    const ids = products.map(p => p.id);
+    const [imagesMap, categoriesMap] = await Promise.all([
+      ProductImageModel.findByProductIds(ids),
+      CategoryModel.findByProductIds(ids),
+    ]);
     const result = products.map(p => ({
       ...p,
-      images: ProductImageModel.findByProductId(p.id),
-      categories: CategoryModel.findByProductId(p.id),
+      images: imagesMap[p.id] || [],
+      categories: categoriesMap[p.id] || [],
     }));
     res.json({ products: result });
   } catch (err) {
@@ -19,12 +24,10 @@ function getProducts(req, res, next) {
   }
 }
 
-function createProduct(req, res, next) {
+async function createProduct(req, res, next) {
   try {
     const { name, description, price_cents, image_url, category, stock, category_ids } = req.body;
 
-    // Server-side validation — these fields come from an admin UI but must
-    // still be sanitized to avoid storing garbage or triggering DB errors.
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'Product name is required' });
     }
@@ -35,7 +38,7 @@ function createProduct(req, res, next) {
       return res.status(400).json({ error: 'stock must be a non-negative integer' });
     }
 
-    const id = ProductModel.create({
+    const id = await ProductModel.create({
       name: name.trim(),
       description: description || '',
       priceCents: price_cents,
@@ -45,15 +48,15 @@ function createProduct(req, res, next) {
     });
 
     if (category_ids && category_ids.length > 0) {
-      CategoryModel.setProductCategories(id, category_ids);
+      await CategoryModel.setProductCategories(id, category_ids);
     }
 
-    const product = ProductModel.findByIdAdmin(id);
+    const product = await ProductModel.findByIdAdmin(id);
     res.status(201).json({
       product: {
         ...product,
         images: [],
-        categories: CategoryModel.findByProductId(id),
+        categories: await CategoryModel.findByProductId(id),
       },
     });
   } catch (err) {
@@ -61,10 +64,10 @@ function createProduct(req, res, next) {
   }
 }
 
-function updateProduct(req, res, next) {
+async function updateProduct(req, res, next) {
   try {
     const { id } = req.params;
-    const existing = ProductModel.findByIdAdmin(id);
+    const existing = await ProductModel.findByIdAdmin(id);
     if (!existing) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -77,7 +80,7 @@ function updateProduct(req, res, next) {
     if (stock !== undefined && (typeof stock !== 'number' || !Number.isInteger(stock) || stock < 0)) {
       return res.status(400).json({ error: 'stock must be a non-negative integer' });
     }
-    ProductModel.update(id, {
+    await ProductModel.update(id, {
       name: name ?? existing.name,
       description: description ?? existing.description,
       priceCents: price_cents ?? existing.price_cents,
@@ -88,22 +91,22 @@ function updateProduct(req, res, next) {
     });
 
     if (category_ids !== undefined) {
-      CategoryModel.setProductCategories(id, category_ids || []);
+      await CategoryModel.setProductCategories(id, category_ids || []);
     }
 
-    const product = ProductModel.findByIdAdmin(id);
-    const images = ProductImageModel.findByProductId(id);
-    const categories = CategoryModel.findByProductId(id);
+    const product = await ProductModel.findByIdAdmin(id);
+    const images = await ProductImageModel.findByProductId(id);
+    const categories = await CategoryModel.findByProductId(id);
     res.json({ product: { ...product, images, categories } });
   } catch (err) {
     next(err);
   }
 }
 
-function deleteProduct(req, res, next) {
+async function deleteProduct(req, res, next) {
   try {
     const { id } = req.params;
-    const deleted = ProductModel.delete(id);
+    const deleted = await ProductModel.delete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -115,10 +118,10 @@ function deleteProduct(req, res, next) {
 
 // --- Product Images ---
 
-function addProductImage(req, res, next) {
+async function addProductImage(req, res, next) {
   try {
     const { id } = req.params;
-    const product = ProductModel.findByIdAdmin(id);
+    const product = await ProductModel.findByIdAdmin(id);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -126,18 +129,18 @@ function addProductImage(req, res, next) {
     if (!image_url) {
       return res.status(400).json({ error: 'image_url is required' });
     }
-    ProductImageModel.add(id, image_url);
-    const images = ProductImageModel.findByProductId(id);
+    await ProductImageModel.add(id, image_url);
+    const images = await ProductImageModel.findByProductId(id);
     res.status(201).json({ images });
   } catch (err) {
     next(err);
   }
 }
 
-function removeProductImage(req, res, next) {
+async function removeProductImage(req, res, next) {
   try {
     const { imageId } = req.params;
-    const removed = ProductImageModel.remove(imageId);
+    const removed = await ProductImageModel.remove(imageId);
     if (!removed) {
       return res.status(404).json({ error: 'Image not found' });
     }
@@ -149,57 +152,57 @@ function removeProductImage(req, res, next) {
 
 // --- Categories ---
 
-function getCategories(req, res, next) {
+async function getCategories(req, res, next) {
   try {
-    const categories = CategoryModel.findAll();
+    const categories = await CategoryModel.findAll();
     res.json({ categories });
   } catch (err) {
     next(err);
   }
 }
 
-function createCategory(req, res, next) {
+async function createCategory(req, res, next) {
   try {
     const { name } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Category name is required' });
     }
-    const id = CategoryModel.create(name.trim());
-    const category = CategoryModel.findById(id);
+    const id = await CategoryModel.create(name.trim());
+    const category = await CategoryModel.findById(id);
     res.status(201).json({ category });
   } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'Category already exists' });
     }
     next(err);
   }
 }
 
-function updateCategory(req, res, next) {
+async function updateCategory(req, res, next) {
   try {
     const { id } = req.params;
     const { name } = req.body;
     if (!name || !name.trim()) {
       return res.status(400).json({ error: 'Category name is required' });
     }
-    const updated = CategoryModel.update(id, name.trim());
+    const updated = await CategoryModel.update(id, name.trim());
     if (!updated) {
       return res.status(404).json({ error: 'Category not found' });
     }
-    const category = CategoryModel.findById(id);
+    const category = await CategoryModel.findById(id);
     res.json({ category });
   } catch (err) {
-    if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    if (err.code === '23505') {
       return res.status(409).json({ error: 'Category already exists' });
     }
     next(err);
   }
 }
 
-function deleteCategory(req, res, next) {
+async function deleteCategory(req, res, next) {
   try {
     const { id } = req.params;
-    const deleted = CategoryModel.delete(id);
+    const deleted = await CategoryModel.delete(id);
     if (!deleted) {
       return res.status(404).json({ error: 'Category not found' });
     }
@@ -211,47 +214,51 @@ function deleteCategory(req, res, next) {
 
 // --- Stock & Sales Dashboard ---
 
-function getStockDashboard(req, res, next) {
+async function getStockDashboard(req, res, next) {
   try {
-    // All products with stock info
-    const products = db.prepare(
+    const { rows: products } = await pool.query(
       'SELECT id, name, image_url, stock, active FROM products ORDER BY stock ASC'
-    ).all();
+    );
 
-    // Sales summary per product (only paid orders)
-    const sales = db.prepare(
+    const { rows: sales } = await pool.query(
       `SELECT oi.product_id, oi.product_name, SUM(oi.quantity) as total_sold, SUM(oi.quantity * oi.price_cents) as total_revenue
        FROM order_items oi
        JOIN orders o ON o.id = oi.order_id
        WHERE o.status = 'paid'
-       GROUP BY oi.product_id
+       GROUP BY oi.product_id, oi.product_name
        ORDER BY total_sold DESC`
-    ).all();
+    );
 
-    // General stats
-    const totalOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'paid'").get().count;
-    const totalRevenue = db.prepare("SELECT COALESCE(SUM(total_cents), 0) as total FROM orders WHERE status = 'paid'").get().total;
-    const pendingOrders = db.prepare("SELECT COUNT(*) as count FROM orders WHERE status = 'pending'").get().count;
-    const totalStock = db.prepare("SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE active = 1").get().total;
+    const { rows: [{ count: totalOrders }] } = await pool.query(
+      "SELECT COUNT(*) as count FROM orders WHERE status = 'paid'"
+    );
+    const { rows: [{ total: totalRevenue }] } = await pool.query(
+      "SELECT COALESCE(SUM(total_cents), 0) as total FROM orders WHERE status = 'paid'"
+    );
+    const { rows: [{ count: pendingOrders }] } = await pool.query(
+      "SELECT COUNT(*) as count FROM orders WHERE status = 'pending'"
+    );
+    const { rows: [{ total: totalStock }] } = await pool.query(
+      "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE active = TRUE"
+    );
 
-    // Sales by date (last 30 days)
-    const salesByDate = db.prepare(
+    const { rows: salesByDate } = await pool.query(
       `SELECT DATE(created_at) as date, COUNT(*) as orders, SUM(total_cents) as revenue
        FROM orders
-       WHERE status = 'paid' AND created_at >= datetime('now', '-30 days')
+       WHERE status = 'paid' AND created_at >= NOW() - INTERVAL '30 days'
        GROUP BY DATE(created_at)
        ORDER BY date ASC`
-    ).all();
+    );
 
     res.json({
       products,
       sales,
       salesByDate,
       stats: {
-        totalOrders,
-        totalRevenue,
-        pendingOrders,
-        totalStock,
+        totalOrders: parseInt(totalOrders, 10),
+        totalRevenue: parseInt(totalRevenue, 10),
+        pendingOrders: parseInt(pendingOrders, 10),
+        totalStock: parseInt(totalStock, 10),
         outOfStock: products.filter(p => p.stock === 0 && p.active).length,
         lowStock: products.filter(p => p.stock > 0 && p.stock <= 5 && p.active).length,
       },

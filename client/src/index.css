@@ -274,6 +274,7 @@ a:hover { text-decoration: none; }
 [data-theme="dark"] .warning-icon {
   color: #fbbf24;
 }
+/*Sergio Bland: No tocar !!!!*/
 .warning {
   margin-top: 1.5rem;
   padding: 1.5rem;

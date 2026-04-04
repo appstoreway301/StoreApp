@@ -3,6 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../../.env') });
 
 const config = {
   port: parseInt(process.env.PORT, 10) || 3001,
+  databaseUrl: process.env.DATABASE_URL || 'postgresql://localhost:5432/storeapp',
   jwtSecret: process.env.JWT_SECRET,
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
   jwtExpiresIn: '15m',

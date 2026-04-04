@@ -11,7 +11,7 @@ async function sendVerification(req, res, next) {
   try {
     const { email } = req.body;
 
-    const existing = UserModel.findByEmail(email);
+    const existing = await UserModel.findByEmail(email);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
@@ -19,7 +19,7 @@ async function sendVerification(req, res, next) {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
 
-    PendingVerificationModel.create({ email, token, expiresAt });
+    await PendingVerificationModel.create({ email, token, expiresAt });
 
     await sendVerificationEmail(email, token);
 
@@ -29,21 +29,18 @@ async function sendVerification(req, res, next) {
   }
 }
 
-function verifyEmail(req, res, next) {
+async function verifyEmail(req, res, next) {
   try {
     const { token } = req.query;
     if (!token) {
       return res.status(400).json({ error: 'Verification token is required' });
     }
 
-    const pending = PendingVerificationModel.findByToken(token);
+    const pending = await PendingVerificationModel.findByToken(token);
     if (!pending) {
       return res.status(400).json({ error: 'Invalid or expired verification token' });
     }
 
-    // Do not echo the raw token back in the response body — the client
-    // already has it from the URL and returning it creates an unnecessary
-    // exposure surface in logs / proxies.
     res.json({ message: 'Email verified successfully.', email: pending.email });
   } catch (err) {
     next(err);
@@ -54,22 +51,22 @@ async function register(req, res, next) {
   try {
     const { token, password, name } = req.body;
 
-    const pending = PendingVerificationModel.findByToken(token);
+    const pending = await PendingVerificationModel.findByToken(token);
     if (!pending) {
       return res.status(400).json({ error: 'Invalid or expired verification token' });
     }
 
-    const existing = UserModel.findByEmail(pending.email);
+    const existing = await UserModel.findByEmail(pending.email);
     if (existing) {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    UserModel.create({ email: pending.email, passwordHash, name, verificationToken: null });
-    UserModel.verifyEmailByEmail(pending.email);
+    await UserModel.create({ email: pending.email, passwordHash, name, verificationToken: null });
+    await UserModel.verifyEmailByEmail(pending.email);
 
-    PendingVerificationModel.deleteByToken(token);
+    await PendingVerificationModel.deleteByToken(token);
 
     res.status(201).json({ message: 'Account created successfully. You can now log in.' });
   } catch (err) {
@@ -81,7 +78,7 @@ async function login(req, res, next) {
   try {
     const { email, password } = req.body;
 
-    const user = UserModel.findByEmail(email);
+    const user = await UserModel.findByEmail(email);
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
@@ -98,7 +95,7 @@ async function login(req, res, next) {
     const accessToken = generateAccessToken(user.id);
     const refreshToken = generateRefreshToken(user.id);
 
-    UserModel.updateRefreshToken(user.id, refreshToken);
+    await UserModel.updateRefreshToken(user.id, refreshToken);
 
     res.json({
       accessToken,
@@ -110,7 +107,7 @@ async function login(req, res, next) {
   }
 }
 
-function refresh(req, res, next) {
+async function refresh(req, res, next) {
   try {
     const { refreshToken } = req.body;
 
@@ -121,14 +118,14 @@ function refresh(req, res, next) {
       return res.status(401).json({ error: 'Invalid or expired refresh token' });
     }
 
-    const user = UserModel.findByRefreshToken(refreshToken);
+    const user = await UserModel.findByRefreshToken(refreshToken);
     if (!user) {
       return res.status(401).json({ error: 'Refresh token has been revoked' });
     }
 
     const newAccessToken = generateAccessToken(user.id);
     const newRefreshToken = generateRefreshToken(user.id);
-    UserModel.updateRefreshToken(user.id, newRefreshToken);
+    await UserModel.updateRefreshToken(user.id, newRefreshToken);
 
     res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
   } catch (err) {
@@ -136,18 +133,18 @@ function refresh(req, res, next) {
   }
 }
 
-function logout(req, res, next) {
+async function logout(req, res, next) {
   try {
-    UserModel.updateRefreshToken(req.userId, null);
+    await UserModel.updateRefreshToken(req.userId, null);
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     next(err);
   }
 }
 
-function getMe(req, res, next) {
+async function getMe(req, res, next) {
   try {
-    const user = UserModel.findById(req.userId);
+    const user = await UserModel.findById(req.userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -171,20 +168,17 @@ async function changePassword(req, res, next) {
       return res.status(400).json({ error: 'New password must be at most 128 characters' });
     }
 
-    // Use findById (which does not return password_hash) only to get the email,
-    // then fetch the full record via findByEmail so we have the hash.
-    const userBase = UserModel.findById(req.userId);
-    if (!userBase) {
+    const user = await UserModel.findByIdFull(req.userId);
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const user = UserModel.findByEmail(userBase.email);
     const valid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
 
     const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    UserModel.updatePassword(req.userId, passwordHash);
+    await UserModel.updatePassword(req.userId, passwordHash);
 
     res.json({ message: 'Password changed successfully' });
   } catch (err) {
@@ -200,27 +194,25 @@ async function changeEmail(req, res, next) {
       return res.status(400).json({ error: 'New email and password are required' });
     }
 
-    // Basic email format guard before hitting the database
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
       return res.status(400).json({ error: 'Invalid email address' });
     }
 
-    const existing = UserModel.findByEmail(newEmail);
+    const existing = await UserModel.findByEmail(newEmail);
     if (existing) {
       return res.status(409).json({ error: 'Email already in use' });
     }
 
-    const userBase = UserModel.findById(req.userId);
-    if (!userBase) {
+    const user = await UserModel.findByIdFull(req.userId);
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const user = UserModel.findByEmail(userBase.email);
     const valid = await bcrypt.compare(password, user.password_hash);
     if (!valid) {
       return res.status(401).json({ error: 'Password is incorrect' });
     }
 
-    UserModel.updateEmail(req.userId, newEmail);
+    await UserModel.updateEmail(req.userId, newEmail);
 
     res.json({ message: 'Email changed successfully', email: newEmail });
   } catch (err) {
@@ -228,18 +220,16 @@ async function changeEmail(req, res, next) {
   }
 }
 
-function updateAvatar(req, res, next) {
+async function updateAvatar(req, res, next) {
   try {
     const { avatar_url } = req.body;
 
-    // Only allow relative /uploads/ paths or null — reject arbitrary external URLs
-    // to prevent the field from being used as an SSRF / open-redirect vector.
     if (avatar_url && !/^\/uploads\/[\w.\-]+$/.test(avatar_url)) {
       return res.status(400).json({ error: 'Invalid avatar URL' });
     }
 
-    UserModel.updateAvatar(req.userId, avatar_url || null);
-    const user = UserModel.findById(req.userId);
+    await UserModel.updateAvatar(req.userId, avatar_url || null);
+    const user = await UserModel.findById(req.userId);
     res.json({ user });
   } catch (err) {
     next(err);

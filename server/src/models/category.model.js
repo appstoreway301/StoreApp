@@ -1,50 +1,79 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
 const CategoryModel = {
-  findAll() {
-    return db.prepare('SELECT * FROM categories ORDER BY name ASC').all();
+  async findAll() {
+    const { rows } = await pool.query('SELECT * FROM categories ORDER BY name ASC');
+    return rows;
   },
 
-  findById(id) {
-    return db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
+  async findById(id) {
+    const { rows } = await pool.query('SELECT * FROM categories WHERE id = $1', [id]);
+    return rows[0] || null;
   },
 
-  create(name) {
-    const result = db.prepare('INSERT INTO categories (name) VALUES (?)').run(name);
-    return result.lastInsertRowid;
+  async create(name) {
+    const { rows } = await pool.query('INSERT INTO categories (name) VALUES ($1) RETURNING id', [name]);
+    return rows[0].id;
   },
 
-  update(id, name) {
-    const result = db.prepare('UPDATE categories SET name = ? WHERE id = ?').run(name, id);
-    return result.changes > 0;
+  async update(id, name) {
+    const { rowCount } = await pool.query('UPDATE categories SET name = $1 WHERE id = $2', [name, id]);
+    return rowCount > 0;
   },
 
-  delete(id) {
-    db.prepare('DELETE FROM product_categories WHERE category_id = ?').run(id);
-    const result = db.prepare('DELETE FROM categories WHERE id = ?').run(id);
-    return result.changes > 0;
+  async delete(id) {
+    await pool.query('DELETE FROM product_categories WHERE category_id = $1', [id]);
+    const { rowCount } = await pool.query('DELETE FROM categories WHERE id = $1', [id]);
+    return rowCount > 0;
   },
 
-  findByProductId(productId) {
-    return db.prepare(
+  async findByProductId(productId) {
+    const { rows } = await pool.query(
       `SELECT c.* FROM categories c
        JOIN product_categories pc ON pc.category_id = c.id
-       WHERE pc.product_id = ?
-       ORDER BY c.name ASC`
-    ).all(productId);
+       WHERE pc.product_id = $1
+       ORDER BY c.name ASC`,
+      [productId]
+    );
+    return rows;
   },
 
-  setProductCategories(productId, categoryIds) {
-    const del = db.prepare('DELETE FROM product_categories WHERE product_id = ?');
-    const ins = db.prepare('INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)');
+  async findByProductIds(productIds) {
+    if (productIds.length === 0) return {};
+    const placeholders = productIds.map((_, i) => `$${i + 1}`).join(',');
+    const { rows } = await pool.query(
+      `SELECT pc.product_id, c.id, c.name FROM categories c
+       JOIN product_categories pc ON pc.category_id = c.id
+       WHERE pc.product_id IN (${placeholders})
+       ORDER BY c.name ASC`,
+      productIds
+    );
+    const map = {};
+    for (const row of rows) {
+      if (!map[row.product_id]) map[row.product_id] = [];
+      map[row.product_id].push({ id: row.id, name: row.name });
+    }
+    return map;
+  },
 
-    const run = db.transaction(() => {
-      del.run(productId);
+  async setProductCategories(productId, categoryIds) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM product_categories WHERE product_id = $1', [productId]);
       for (const catId of categoryIds) {
-        ins.run(productId, catId);
+        await client.query(
+          'INSERT INTO product_categories (product_id, category_id) VALUES ($1, $2)',
+          [productId, catId]
+        );
       }
-    });
-    run();
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   },
 };
 

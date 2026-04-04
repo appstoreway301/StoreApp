@@ -1,29 +1,48 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
 const ProductImageModel = {
-  findByProductId(productId) {
-    return db.prepare(
-      'SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC'
-    ).all(productId);
+  async findByProductId(productId) {
+    const { rows } = await pool.query(
+      'SELECT * FROM product_images WHERE product_id = $1 ORDER BY sort_order ASC',
+      [productId]
+    );
+    return rows;
   },
 
-  add(productId, imageUrl) {
-    const maxOrder = db.prepare(
-      'SELECT COALESCE(MAX(sort_order), -1) as max_order FROM product_images WHERE product_id = ?'
-    ).get(productId);
-    const result = db.prepare(
-      'INSERT INTO product_images (product_id, image_url, sort_order) VALUES (?, ?, ?)'
-    ).run(productId, imageUrl, maxOrder.max_order + 1);
-    return result.lastInsertRowid;
+  async findByProductIds(productIds) {
+    if (productIds.length === 0) return {};
+    const placeholders = productIds.map((_, i) => `$${i + 1}`).join(',');
+    const { rows } = await pool.query(
+      `SELECT * FROM product_images WHERE product_id IN (${placeholders}) ORDER BY sort_order ASC`,
+      productIds
+    );
+    const map = {};
+    for (const row of rows) {
+      if (!map[row.product_id]) map[row.product_id] = [];
+      map[row.product_id].push(row);
+    }
+    return map;
   },
 
-  remove(imageId) {
-    const result = db.prepare('DELETE FROM product_images WHERE id = ?').run(imageId);
-    return result.changes > 0;
+  async add(productId, imageUrl) {
+    const { rows: maxRows } = await pool.query(
+      'SELECT COALESCE(MAX(sort_order), -1) as max_order FROM product_images WHERE product_id = $1',
+      [productId]
+    );
+    const { rows } = await pool.query(
+      'INSERT INTO product_images (product_id, image_url, sort_order) VALUES ($1, $2, $3) RETURNING id',
+      [productId, imageUrl, maxRows[0].max_order + 1]
+    );
+    return rows[0].id;
   },
 
-  removeAllByProductId(productId) {
-    db.prepare('DELETE FROM product_images WHERE product_id = ?').run(productId);
+  async remove(imageId) {
+    const { rowCount } = await pool.query('DELETE FROM product_images WHERE id = $1', [imageId]);
+    return rowCount > 0;
+  },
+
+  async removeAllByProductId(productId) {
+    await pool.query('DELETE FROM product_images WHERE product_id = $1', [productId]);
   },
 };
 

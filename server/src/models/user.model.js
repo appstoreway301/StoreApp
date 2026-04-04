@@ -1,62 +1,79 @@
-const db = require('../db/connection');
+const pool = require('../db/connection');
 
 const UserModel = {
-  create({ email, passwordHash, name, verificationToken }) {
-    const stmt = db.prepare(
-      'INSERT INTO users (email, password_hash, name, verification_token) VALUES (?, ?, ?, ?)'
+  async create({ email, passwordHash, name, verificationToken }) {
+    const { rows } = await pool.query(
+      'INSERT INTO users (email, password_hash, name, verification_token) VALUES ($1, $2, $3, $4) RETURNING id',
+      [email, passwordHash, name, verificationToken]
     );
-    const result = stmt.run(email, passwordHash, name, verificationToken);
-    return result.lastInsertRowid;
+    return rows[0].id;
   },
 
-  findByEmail(email) {
-    return db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  async findByEmail(email) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    return rows[0] || null;
   },
 
-  findById(id) {
-    return db.prepare('SELECT id, email, name, role, email_verified, avatar_url, created_at FROM users WHERE id = ?').get(id);
+  async findById(id) {
+    const { rows } = await pool.query(
+      'SELECT id, email, name, role, email_verified, avatar_url, created_at FROM users WHERE id = $1',
+      [id]
+    );
+    return rows[0] || null;
   },
 
-  verifyEmail(token) {
-    const result = db.prepare(
-      'UPDATE users SET email_verified = 1, verification_token = NULL, updated_at = datetime(\'now\') WHERE verification_token = ?'
-    ).run(token);
-    return result.changes > 0;
+  async findByIdFull(id) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    return rows[0] || null;
   },
 
-  verifyEmailByEmail(email) {
-    const result = db.prepare(
-      'UPDATE users SET email_verified = 1, verification_token = NULL, updated_at = datetime(\'now\') WHERE email = ?'
-    ).run(email);
-    return result.changes > 0;
+  async verifyEmail(token) {
+    const { rowCount } = await pool.query(
+      "UPDATE users SET email_verified = TRUE, verification_token = NULL, updated_at = NOW() WHERE verification_token = $1",
+      [token]
+    );
+    return rowCount > 0;
   },
 
-  updateRefreshToken(userId, token) {
-    db.prepare(
-      'UPDATE users SET refresh_token = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).run(token, userId);
+  async verifyEmailByEmail(email) {
+    const { rowCount } = await pool.query(
+      "UPDATE users SET email_verified = TRUE, verification_token = NULL, updated_at = NOW() WHERE email = $1",
+      [email]
+    );
+    return rowCount > 0;
   },
 
-  findByRefreshToken(token) {
-    return db.prepare('SELECT * FROM users WHERE refresh_token = ?').get(token);
+  async updateRefreshToken(userId, token) {
+    await pool.query(
+      'UPDATE users SET refresh_token = $1, updated_at = NOW() WHERE id = $2',
+      [token, userId]
+    );
   },
 
-  updatePassword(userId, passwordHash) {
-    db.prepare(
-      'UPDATE users SET password_hash = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).run(passwordHash, userId);
+  async findByRefreshToken(token) {
+    const { rows } = await pool.query('SELECT * FROM users WHERE refresh_token = $1', [token]);
+    return rows[0] || null;
   },
 
-  updateEmail(userId, email) {
-    db.prepare(
-      'UPDATE users SET email = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).run(email, userId);
+  async updatePassword(userId, passwordHash) {
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [passwordHash, userId]
+    );
   },
 
-  updateAvatar(userId, avatarUrl) {
-    db.prepare(
-      'UPDATE users SET avatar_url = ?, updated_at = datetime(\'now\') WHERE id = ?'
-    ).run(avatarUrl, userId);
+  async updateEmail(userId, email) {
+    await pool.query(
+      'UPDATE users SET email = $1, updated_at = NOW() WHERE id = $2',
+      [email, userId]
+    );
+  },
+
+  async updateAvatar(userId, avatarUrl) {
+    await pool.query(
+      'UPDATE users SET avatar_url = $1, updated_at = NOW() WHERE id = $2',
+      [avatarUrl, userId]
+    );
   },
 };
 

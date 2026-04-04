@@ -1,10 +1,8 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
+const config = require('../config/env');
 
-const dbPath = path.join(__dirname, '../../data/store.db');
-const db = new Database(dbPath);
+const pool = new Pool({
+  connectionString: config.databaseUrl,
+});
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-
-module.exports = db;
+module.exports = pool;
