@@ -59,6 +59,44 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="about-us">
+        <div className="about-us-inner">
+          <h2 className="about-us-title">Quiénes Somos</h2>
+          <div className="about-us-content">
+            <div className="about-us-text">
+              <p className="about-us-intro">
+                Somos <strong>Kong Montoya</strong>, una marca de streetwear nacida en Sonora, México.
+                Creemos que la ropa es una extensión de tu actitud — cada prenda está diseñada para
+                quienes no siguen tendencias, las crean.
+              </p>
+              <div className="about-us-values">
+                <div className="about-value">
+                  <span className="about-value-icon">▪</span>
+                  <div>
+                    <h4>Diseño Original</h4>
+                    <p>Cada pieza nace de ideas propias, con identidad única y atención al detalle.</p>
+                  </div>
+                </div>
+                <div className="about-value">
+                  <span className="about-value-icon">▪</span>
+                  <div>
+                    <h4>Calidad Real</h4>
+                    <p>Materiales seleccionados para que tu ropa aguante tu ritmo de vida.</p>
+                  </div>
+                </div>
+                <div className="about-value">
+                  <span className="about-value-icon">▪</span>
+                  <div>
+                    <h4>Hecho en México</h4>
+                    <p>Orgullosamente producido en Sonora, apoyando talento y manufactura local.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div id="products" className="products-section">
       <ParticleBackground />
       <div className="products-section-inner">

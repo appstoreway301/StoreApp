@@ -4,7 +4,7 @@ const CartModel = require('../models/cart.model');
 const OrderModel = require('../models/order.model');
 const ProductModel = require('../models/product.model');
 const UserModel = require('../models/user.model');
-const { sendOrderNotification } = require('../utils/email');
+const { sendOrderNotification, sendOrderConfirmationToCustomer } = require('../utils/email');
 
 async function createSession(req, res, next) {
   try {
@@ -67,7 +67,7 @@ async function createSession(req, res, next) {
   }
 }
 
-// Lógica de post-pago compartida entre webhook y verifySession.
+// Lógica post-pago compartida entre webhook y verifySession.
 // markProcessed garantiza que solo se ejecuta una vez por orden.
 async function processOrder(order) {
   const locked = await OrderModel.markProcessed(order.id);
@@ -80,7 +80,7 @@ async function processOrder(order) {
   await CartModel.clearCart(order.user_id);
 
   const user = await UserModel.findById(order.user_id);
-  sendOrderNotification({
+  const emailData = {
     order,
     items,
     customerEmail: user?.email || 'Unknown',
@@ -93,7 +93,12 @@ async function processOrder(order) {
       country: order.shipping_country,
       phone: order.shipping_phone,
     },
-  }).catch(err => console.error('Failed to send order notification:', err.message));
+  };
+
+  sendOrderNotification(emailData)
+    .catch(err => console.error('Failed to send order notification:', err.message));
+  sendOrderConfirmationToCustomer(emailData)
+    .catch(err => console.error('Failed to send customer confirmation:', err.message));
 }
 
 async function handleWebhook(req, res, next) {
