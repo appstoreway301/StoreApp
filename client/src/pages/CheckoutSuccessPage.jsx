@@ -47,6 +47,23 @@ export default function CheckoutSuccessPage() {
           <p>Status: <strong>{order.status}</strong></p>
           <p>Total: <strong>{formatPrice(order.total_cents)}</strong></p>
 
+          {order.shipping_carrier && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.92rem' }}>
+              Shipping: <strong>{order.shipping_carrier.toUpperCase()}</strong>
+              {order.shipping_service && ` - ${order.shipping_service}`}
+              {order.shipping_cost_cents > 0 && ` (${formatPrice(order.shipping_cost_cents)})`}
+            </p>
+          )}
+
+          {order.shipment?.tracking_number && (
+            <p style={{ fontSize: '0.88rem' }}>
+              Tracking: <code>{order.shipment.tracking_number}</code>
+              {order.shipment.track_url && (
+                <> — <a href={order.shipment.track_url} target="_blank" rel="noopener noreferrer">Track shipment</a></>
+              )}
+            </p>
+          )}
+
           {order.items && (
             <ul className="order-items-list">
               {order.items.map(item => (

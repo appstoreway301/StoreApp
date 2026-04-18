@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/client';
+import ShipmentTracker from '../components/ShipmentTracker';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -61,6 +62,20 @@ export default function OrdersPage() {
                       </li>
                     ))}
                   </ul>
+
+                  {orderDetails[order.id].shipping_carrier && (
+                    <div style={{ marginTop: '0.75rem', fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                      <strong>Shipping:</strong> {orderDetails[order.id].shipping_carrier?.toUpperCase()}
+                      {orderDetails[order.id].shipping_service && ` - ${orderDetails[order.id].shipping_service}`}
+                      {orderDetails[order.id].shipping_cost_cents > 0 && ` (${formatPrice(orderDetails[order.id].shipping_cost_cents)})`}
+                    </div>
+                  )}
+
+                  {order.status === 'paid' && (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <ShipmentTracker orderId={order.id} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

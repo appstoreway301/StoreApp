@@ -4,6 +4,8 @@ const CartModel = require('../models/cart.model');
 const OrderModel = require('../models/order.model');
 const ProductModel = require('../models/product.model');
 const UserModel = require('../models/user.model');
+const ShipmentModel = require('../models/shipment.model');
+const { envia, getOrigin, buildPackages, abbreviateState } = require('../utils/envia');
 const { sendOrderNotification, sendOrderConfirmationToCustomer } = require('../utils/email');
 
 async function createSession(req, res, next) {
@@ -12,7 +14,7 @@ async function createSession(req, res, next) {
       return res.status(503).json({ error: 'Payment service not configured' });
     }
 
-    const { shipping } = req.body;
+    const { shipping, shippingQuote } = req.body;
     if (!shipping || !shipping.name || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.country) {
       return res.status(400).json({ error: 'Shipping address is required' });
     }
@@ -30,9 +32,41 @@ async function createSession(req, res, next) {
       }
     }
 
-    const totalCents = cartItems.reduce(
+    // Validate carrier availability with Envia BEFORE payment (free, no label generated)
+    if (envia && shippingQuote?.carrier) {
+      try {
+        const origin = getOrigin();
+        const packages = buildPackages(cartItems);
+        await envia.post('/ship/rate/', {
+          origin,
+          destination: {
+            name: shipping.name,
+            phone: shipping.phone || '',
+            street: shipping.address,
+            number: 'S/N',
+            city: shipping.city,
+            state: abbreviateState(shipping.state),
+            country: shipping.country,
+            postalCode: shipping.zip,
+          },
+          packages,
+          shipment: { type: 1, carrier: shippingQuote.carrier },
+        });
+      } catch (err) {
+        const enviaMsg = err.response?.data?.error?.message || err.message;
+        console.error('[Envia] Pre-checkout validation failed:', enviaMsg);
+        return res.status(400).json({
+          error: `${shippingQuote.carrier.toUpperCase()} is currently unavailable: ${enviaMsg}. Please select a different shipping method.`,
+          carrierError: true,
+        });
+      }
+    }
+
+    const productsCents = cartItems.reduce(
       (sum, item) => sum + item.price_cents * item.quantity, 0
     );
+    const shippingCostCents = shippingQuote?.amountCents || 0;
+    const totalCents = productsCents + shippingCostCents;
 
     const line_items = cartItems.map(item => ({
       price_data: {
@@ -42,6 +76,17 @@ async function createSession(req, res, next) {
       },
       quantity: item.quantity,
     }));
+
+    if (shippingCostCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: { name: `Envio (${shippingQuote.carrier} - ${shippingQuote.service})` },
+          unit_amount: shippingCostCents,
+        },
+        quantity: 1,
+      });
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -59,7 +104,7 @@ async function createSession(req, res, next) {
       quantity: item.quantity,
     }));
 
-    await OrderModel.create(req.userId, totalCents, orderItems, session.id, shipping);
+    await OrderModel.create(req.userId, totalCents, orderItems, session.id, shipping, shippingQuote || {});
 
     res.json({ url: session.url });
   } catch (err) {
@@ -94,6 +139,64 @@ async function processOrder(order) {
       phone: order.shipping_phone,
     },
   };
+
+  // Generate shipping label via Envia AFTER payment confirmed
+  let shipmentInfo = null;
+  if (envia && order.shipping_carrier) {
+    try {
+      await ShipmentModel.create(order.id, order.shipping_carrier, order.shipping_service || '');
+
+      const origin = getOrigin();
+      const packages = buildPackages(items.map(i => ({
+        name: i.product_name,
+        quantity: i.quantity,
+        weight_kg: null,
+      })));
+
+      const generatePayload = {
+        origin,
+        destination: {
+          name: order.shipping_name,
+          phone: order.shipping_phone || '',
+          street: order.shipping_address,
+          number: 'S/N',
+          city: order.shipping_city,
+          state: abbreviateState(order.shipping_state),
+          country: order.shipping_country,
+          postalCode: order.shipping_zip,
+        },
+        packages,
+        shipment: {
+          type: 1,
+          carrier: order.shipping_carrier,
+          service: order.shipping_service || undefined,
+        },
+        settings: {
+          currency: 'MXN',
+          printFormat: 'PDF',
+          printSize: 'STOCK_4X6',
+          comments: `Order #${order.id}`,
+        },
+      };
+
+      console.log('[Envia] Generating label (post-payment):', JSON.stringify(generatePayload));
+      const response = await envia.post('/ship/generate/', generatePayload);
+      console.log('[Envia] Label generated OK:', JSON.stringify(response.data));
+
+      const gen = response.data?.data || response.data;
+      shipmentInfo = await ShipmentModel.updateAfterGenerate(order.id, {
+        enviaShipmentId: gen.shipmentId || gen.shipment_id || '',
+        trackingNumber: gen.trackingNumber || gen.tracking_number || '',
+        trackUrl: gen.trackUrl || gen.track_url || '',
+        labelUrl: gen.label || gen.label_url || '',
+      });
+    } catch (err) {
+      console.error('Envia label generation failed (post-payment):', err.response?.data || err.message);
+      await ShipmentModel.setError(order.id, JSON.stringify(err.response?.data) || err.message);
+    }
+  }
+
+  emailData.shipment = shipmentInfo;
 
   sendOrderNotification(emailData)
     .catch(err => console.error('Failed to send order notification:', err.message));

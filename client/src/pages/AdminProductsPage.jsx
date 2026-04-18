@@ -8,6 +8,7 @@ const emptyForm = {
   price: '',
   image_url: '',
   stock: '',
+  weight_kg: '1.00',
   category_ids: [],
 };
 
@@ -86,6 +87,7 @@ export default function AdminProductsPage() {
       price: (product.price_cents / 100).toFixed(2),
       image_url: product.image_url || '',
       stock: String(product.stock),
+      weight_kg: String(product.weight_kg || '1.00'),
       category_ids: (product.categories || []).map(c => c.id),
     });
     setError('');
@@ -115,6 +117,7 @@ export default function AdminProductsPage() {
       price_cents: priceCents,
       image_url: form.image_url,
       stock: parseInt(form.stock) || 0,
+      weight_kg: parseFloat(form.weight_kg) || 1.0,
       category_ids: form.category_ids,
     };
 
@@ -278,6 +281,10 @@ export default function AdminProductsPage() {
             <div className="form-group">
               <label>Stock</label>
               <input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label>Weight (kg)</label>
+              <input name="weight_kg" type="number" step="0.01" min="0.01" value={form.weight_kg} onChange={handleChange} required />
             </div>
             <div className="form-group">
               <label>Categories</label>

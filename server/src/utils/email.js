@@ -107,7 +107,7 @@ async function sendOrderNotification({ order, items, customerEmail, shipping }) 
   }
 }
 
-async function sendOrderConfirmationToCustomer({ order, items, customerEmail, shipping }) {
+async function sendOrderConfirmationToCustomer({ order, items, customerEmail, shipping, shipment }) {
   const itemRows = items.map(item =>
     `<tr>
       <td style="padding:8px;border:1px solid #ddd;">${escHtml(item.product_name)}</td>
@@ -151,6 +151,15 @@ async function sendOrderConfirmationToCustomer({ order, items, customerEmail, sh
         <h3 style="text-align:right;color:#4CAF50;">Total: $${(order.total_cents / 100).toFixed(2)} USD</h3>
 
         ${shippingHtml ? `<h3 style="border-bottom:2px solid #4CAF50;padding-bottom:8px;">Shipping Address</h3>${shippingHtml}` : ''}
+
+        ${shipment && shipment.tracking_number ? `
+        <h3 style="border-bottom:2px solid #4CAF50;padding-bottom:8px;">Shipment Tracking</h3>
+        <p style="margin:0;line-height:1.6;">
+          <strong>Carrier:</strong> ${escHtml(shipment.carrier?.toUpperCase() || '')}<br>
+          <strong>Tracking #:</strong> ${escHtml(shipment.tracking_number)}<br>
+          ${shipment.track_url ? `<a href="${escHtml(shipment.track_url)}" style="color:#4CAF50;">Track your package</a>` : ''}
+        </p>
+        ` : ''}
 
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
         <p style="color:#666;font-size:14px;">If you have any questions about your order, feel free to contact us.</p>

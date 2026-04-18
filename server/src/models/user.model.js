@@ -75,6 +75,7 @@ const UserModel = {
       [avatarUrl, userId]
     );
   },
+
 };
 
 module.exports = UserModel;

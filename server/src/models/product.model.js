@@ -41,18 +41,18 @@ const ProductModel = {
     return rows;
   },
 
-  async create({ name, description, priceCents, imageUrl, category, stock }) {
+  async create({ name, description, priceCents, imageUrl, category, stock, weightKg }) {
     const { rows } = await pool.query(
-      'INSERT INTO products (name, description, price_cents, image_url, category, stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-      [name, description, priceCents, imageUrl, category, stock]
+      'INSERT INTO products (name, description, price_cents, image_url, category, stock, weight_kg) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
+      [name, description, priceCents, imageUrl, category, stock, weightKg || 1.0]
     );
     return rows[0].id;
   },
 
-  async update(id, { name, description, priceCents, imageUrl, category, stock, active }) {
+  async update(id, { name, description, priceCents, imageUrl, category, stock, active, weightKg }) {
     const { rowCount } = await pool.query(
-      'UPDATE products SET name = $1, description = $2, price_cents = $3, image_url = $4, category = $5, stock = $6, active = $7 WHERE id = $8',
-      [name, description, priceCents, imageUrl, category, stock, active, id]
+      'UPDATE products SET name = $1, description = $2, price_cents = $3, image_url = $4, category = $5, stock = $6, active = $7, weight_kg = $8 WHERE id = $9',
+      [name, description, priceCents, imageUrl, category, stock, active, weightKg, id]
     );
     return rowCount > 0;
   },

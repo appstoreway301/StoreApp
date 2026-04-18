@@ -26,7 +26,7 @@ async function getProducts(req, res, next) {
 
 async function createProduct(req, res, next) {
   try {
-    const { name, description, price_cents, image_url, category, stock, category_ids } = req.body;
+    const { name, description, price_cents, image_url, category, stock, category_ids, weight_kg } = req.body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'Product name is required' });
@@ -45,6 +45,7 @@ async function createProduct(req, res, next) {
       imageUrl: image_url || '',
       category: category || '',
       stock: stock || 0,
+      weightKg: weight_kg || 1.0,
     });
 
     if (category_ids && category_ids.length > 0) {
@@ -72,7 +73,7 @@ async function updateProduct(req, res, next) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const { name, description, price_cents, image_url, category, stock, active, category_ids } = req.body;
+    const { name, description, price_cents, image_url, category, stock, active, category_ids, weight_kg } = req.body;
 
     if (price_cents !== undefined && (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0)) {
       return res.status(400).json({ error: 'price_cents must be a non-negative integer' });
@@ -88,6 +89,7 @@ async function updateProduct(req, res, next) {
       category: category ?? existing.category,
       stock: stock ?? existing.stock,
       active: active ?? existing.active,
+      weightKg: weight_kg ?? existing.weight_kg ?? 1.0,
     });
 
     if (category_ids !== undefined) {

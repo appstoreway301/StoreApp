@@ -1,19 +1,22 @@
 const pool = require('../db/connection');
 
 const OrderModel = {
-  async create(userId, totalCents, items, stripeSessionId, shipping = {}) {
+  async create(userId, totalCents, items, stripeSessionId, shipping = {}, shippingQuote = {}) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
 
       const { rows } = await client.query(
-        `INSERT INTO orders (user_id, total_cents, stripe_session_id, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, shipping_phone)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        `INSERT INTO orders (user_id, total_cents, stripe_session_id, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, shipping_phone, shipping_cost_cents, shipping_carrier, shipping_service)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`,
         [
           userId, totalCents, stripeSessionId,
           shipping.name || '', shipping.address || '', shipping.city || '',
           shipping.state || '', shipping.zip || '', shipping.country || '',
-          shipping.phone || ''
+          shipping.phone || '',
+          shippingQuote.amountCents || 0,
+          shippingQuote.carrier || '',
+          shippingQuote.service || ''
         ]
       );
       const orderId = rows[0].id;

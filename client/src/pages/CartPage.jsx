@@ -2,8 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import CartItem from '../components/CartItem';
+import ShippingQuotes from '../components/ShippingQuotes';
 import api from '../api/client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const emptyShipping = {
   name: '',
@@ -37,20 +38,40 @@ export default function CartPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState('');
   const [showShipping, setShowShipping] = useState(false);
+  const [showQuotes, setShowQuotes] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
-  const [shipping, setShipping] = useState(() => {
-    const saved = localStorage.getItem('shipping');
-    return saved ? JSON.parse(saved) : emptyShipping;
-  });
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [shipping, setShipping] = useState(emptyShipping);
+
+  // Cargar direcciones guardadas del usuario
+  useEffect(() => {
+    if (isAuthenticated) {
+      api.get('/addresses').then(({ data }) => {
+        const addrs = data.addresses || [];
+        setSavedAddresses(addrs);
+        const defaultAddr = addrs.find(a => a.is_default) || addrs[0];
+        if (defaultAddr) {
+          setShipping({
+            name: defaultAddr.name,
+            address: defaultAddr.address,
+            city: defaultAddr.city,
+            state: defaultAddr.state,
+            zip: defaultAddr.zip,
+            country: defaultAddr.country,
+            phone: defaultAddr.phone || '',
+          });
+        }
+      }).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   function formatPrice(cents) {
     return `$${(cents / 100).toFixed(2)}`;
   }
 
   function updateShipping(updates) {
-    const updated = { ...shipping, ...updates };
-    setShipping(updated);
-    localStorage.setItem('shipping', JSON.stringify(updated));
+    setShipping(prev => ({ ...prev, ...updates }));
   }
 
   function handleShippingChange(e) {
@@ -91,6 +112,18 @@ export default function CartPage() {
     lookupZip(shipping.zip);
   }
 
+  function selectSavedAddress(addr) {
+    setShipping({
+      name: addr.name,
+      address: addr.address,
+      city: addr.city,
+      state: addr.state,
+      zip: addr.zip,
+      country: addr.country,
+      phone: addr.phone || '',
+    });
+  }
+
   function handleProceed() {
     if (!isAuthenticated) {
       navigate('/login?redirect=/cart');
@@ -98,16 +131,35 @@ export default function CartPage() {
     }
     setShowShipping(true);
     setError('');
+    // Si ya tiene direcciones guardadas, saltar directo a quotes
+    if (savedAddresses.length > 0) {
+      setShowQuotes(true);
+    }
   }
 
-  async function handleCheckout(e) {
+  function handleGetQuotes(e) {
     e.preventDefault();
     setError('');
 
-    const countryName = COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country;
-
     if (!shipping.name || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.country) {
       setError('Please fill in all required address fields');
+      return;
+    }
+
+    setShowQuotes(true);
+    setSelectedQuote(null);
+  }
+
+  function handleBackToAddress() {
+    setShowQuotes(false);
+    setSelectedQuote(null);
+  }
+
+  async function handleCheckout() {
+    setError('');
+
+    if (!selectedQuote) {
+      setError('Please select a shipping method');
       return;
     }
 
@@ -115,11 +167,21 @@ export default function CartPage() {
 
     try {
       const { data } = await api.post('/checkout/create-session', {
-        shipping: { ...shipping, country: countryName },
+        shipping: { ...shipping },
+        shippingQuote: {
+          carrier: selectedQuote.carrier,
+          service: selectedQuote.service,
+          amountCents: selectedQuote.priceCents,
+        },
       });
       window.location.href = data.url;
     } catch (err) {
-      setError(err.response?.data?.error || 'Could not start checkout');
+      const errorData = err.response?.data;
+      setError(errorData?.error || 'Could not start checkout');
+      // If carrier failed, go back to quote selection so user can pick another
+      if (errorData?.carrierError) {
+        setSelectedQuote(null);
+      }
       setCheckoutLoading(false);
     }
   }
@@ -132,6 +194,8 @@ export default function CartPage() {
       </div>
     );
   }
+
+  const grandTotal = cartTotal + (selectedQuote?.priceCents || 0);
 
   return (
     <div>
@@ -146,10 +210,25 @@ export default function CartPage() {
 
       <div className="cart-summary">
         <div className="cart-total">
-          <span>Total:</span>
+          <span>Subtotal:</span>
           <strong>{formatPrice(cartTotal)}</strong>
         </div>
 
+        {selectedQuote && (
+          <div className="cart-total" style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+            <span>Shipping ({selectedQuote.carrier}):</span>
+            <span>{formatPrice(selectedQuote.priceCents)}</span>
+          </div>
+        )}
+
+        {selectedQuote && (
+          <div className="cart-total" style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+            <span>Total:</span>
+            <strong>{formatPrice(grandTotal)}</strong>
+          </div>
+        )}
+
+        {/* Step 1: Proceed to checkout */}
         {!showShipping ? (
           <div className="cart-actions">
             <button className="btn" onClick={clearCart}>Clear Cart</button>
@@ -157,8 +236,9 @@ export default function CartPage() {
               Proceed to Checkout
             </button>
           </div>
-        ) : (
-          <form onSubmit={handleCheckout} className="shipping-form">
+        ) : !showQuotes ? (
+          /* Step 2: Shipping address form */
+          <form onSubmit={handleGetQuotes} className="shipping-form">
             <h3>Shipping Address</h3>
             <div className="shipping-grid">
               <div className="form-group">
@@ -203,8 +283,8 @@ export default function CartPage() {
             </div>
             <div className="cart-actions">
               <button type="button" className="btn" onClick={() => setShowShipping(false)}>Back</button>
-              <button type="submit" className="btn btn-primary" disabled={checkoutLoading}>
-                {checkoutLoading ? 'Redirecting...' : 'Confirm & Pay'}
+              <button type="submit" className="btn btn-primary">
+                Get Shipping Quotes
               </button>
             </div>
             <div className="alert-warning">
@@ -216,13 +296,78 @@ export default function CartPage() {
               <span>Please verify that your shipping address is correct before proceeding. Orders shipped to an incorrect address cannot be refunded.</span>
             </div>
           </form>
+        ) : (
+          /* Step 3: Select shipping method & pay */
+          <div className="shipping-form">
+            <h3>Shipping To</h3>
 
+            {/* Selector de direcciones guardadas */}
+            {savedAddresses.length > 1 && (
+              <div className="address-selector" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                {savedAddresses.map(addr => {
+                  const isSelected = shipping.name === addr.name && shipping.address === addr.address && shipping.zip === addr.zip;
+                  return (
+                    <button
+                      key={addr.id}
+                      type="button"
+                      className={`btn btn-sm${isSelected ? ' btn-primary' : ''}`}
+                      onClick={() => { selectSavedAddress(addr); setSelectedQuote(null); }}
+                    >
+                      {addr.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="shipping-address-summary" style={{
+              padding: '0.75rem 1rem',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '1rem',
+              fontSize: '0.88rem',
+              color: 'var(--text-secondary)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <div>
+                <strong style={{ color: 'var(--text)' }}>{shipping.name}</strong><br />
+                {shipping.address}, {shipping.city}, {shipping.state} {shipping.zip}<br />
+                {COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country}
+                {shipping.phone && <><br />{shipping.phone}</>}
+              </div>
+              <button
+                type="button"
+                className="btn"
+                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap' }}
+                onClick={handleBackToAddress}
+              >
+                Edit
+              </button>
+            </div>
+
+            <ShippingQuotes
+              shipping={shipping}
+              selected={selectedQuote}
+              onSelect={setSelectedQuote}
+            />
+
+            <div className="cart-actions" style={{ marginTop: '1rem' }}>
+              <button type="button" className="btn" onClick={handleBackToAddress}>Back</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!selectedQuote || checkoutLoading}
+                onClick={handleCheckout}
+              >
+                {checkoutLoading ? 'Redirecting...' : `Confirm & Pay ${selectedQuote ? formatPrice(grandTotal) : ''}`}
+              </button>
+            </div>
+          </div>
         )}
       </div>
-
-
-
     </div>
-
   );
 }

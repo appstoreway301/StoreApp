@@ -104,6 +104,95 @@ async function migrate() {
     END $$;
   `);
 
+  // Migración: columnas de shipping en orders para Envia
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'orders' AND column_name = 'shipping_cost_cents'
+      ) THEN
+        ALTER TABLE orders ADD COLUMN shipping_cost_cents INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE orders ADD COLUMN shipping_carrier TEXT DEFAULT '';
+        ALTER TABLE orders ADD COLUMN shipping_service TEXT DEFAULT '';
+      END IF;
+    END $$;
+  `);
+
+  // Migración: columna weight_kg en products
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'products' AND column_name = 'weight_kg'
+      ) THEN
+        ALTER TABLE products ADD COLUMN weight_kg DECIMAL(6,2) NOT NULL DEFAULT 1.00;
+      END IF;
+    END $$;
+  `);
+
+  // Tabla de direcciones de envío del usuario (máx 3)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_addresses (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label TEXT NOT NULL DEFAULT 'Home',
+      name TEXT NOT NULL,
+      address TEXT NOT NULL,
+      city TEXT NOT NULL,
+      state TEXT NOT NULL,
+      zip TEXT NOT NULL,
+      country TEXT NOT NULL DEFAULT 'MX',
+      phone TEXT DEFAULT '',
+      is_default BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // Migrar datos de shipping de users a user_addresses si existen
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'users' AND column_name = 'shipping_name'
+      ) THEN
+        INSERT INTO user_addresses (user_id, label, name, address, city, state, zip, country, phone, is_default)
+        SELECT id, 'Home', shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_country, COALESCE(shipping_phone, ''), TRUE
+        FROM users
+        WHERE shipping_name IS NOT NULL AND shipping_name != ''
+        ON CONFLICT DO NOTHING;
+
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_name;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_address;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_city;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_state;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_zip;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_country;
+        ALTER TABLE users DROP COLUMN IF EXISTS shipping_phone;
+      END IF;
+    END $$;
+  `);
+
+  // Tabla de shipments para tracking de Envia
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS shipments (
+      id SERIAL PRIMARY KEY,
+      order_id INTEGER NOT NULL UNIQUE REFERENCES orders(id),
+      envia_shipment_id TEXT,
+      carrier TEXT NOT NULL,
+      service TEXT,
+      tracking_number TEXT,
+      track_url TEXT,
+      label_url TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      error_message TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
   console.log('Database migrations completed.');
 }
 

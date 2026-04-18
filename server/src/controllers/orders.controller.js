@@ -1,4 +1,5 @@
 const OrderModel = require('../models/order.model');
+const ShipmentModel = require('../models/shipment.model');
 
 async function list(req, res, next) {
   try {
@@ -17,7 +18,8 @@ async function getById(req, res, next) {
     }
 
     const items = await OrderModel.findItemsByOrderId(order.id);
-    res.json({ order: { ...order, items } });
+    const shipment = await ShipmentModel.findByOrderId(order.id);
+    res.json({ order: { ...order, items, shipment } });
   } catch (err) {
     next(err);
   }

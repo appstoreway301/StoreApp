@@ -3,6 +3,32 @@ import { Link } from 'react-router-dom';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+const COUNTRIES = [
+  { code: 'MX', name: 'Mexico' },
+  { code: 'US', name: 'United States' },
+  { code: 'CO', name: 'Colombia' },
+  { code: 'AR', name: 'Argentina' },
+  { code: 'ES', name: 'Spain' },
+  { code: 'CL', name: 'Chile' },
+  { code: 'PE', name: 'Peru' },
+  { code: 'BR', name: 'Brazil' },
+  { code: 'CA', name: 'Canada' },
+  { code: 'GB', name: 'United Kingdom' },
+  { code: 'DE', name: 'Germany' },
+  { code: 'FR', name: 'France' },
+];
+
+const emptyAddress = {
+  label: 'Home',
+  name: '',
+  address: '',
+  city: '',
+  state: '',
+  zip: '',
+  country: 'MX',
+  phone: '',
+};
+
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const [profile, setProfile] = useState(null);
@@ -28,14 +54,25 @@ export default function ProfilePage() {
   const [emSuccess, setEmSuccess] = useState('');
   const [emLoading, setEmLoading] = useState(false);
 
+  // Addresses
+  const [addresses, setAddresses] = useState([]);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [addressForm, setAddressForm] = useState(emptyAddress);
+  const [addrError, setAddrError] = useState('');
+  const [addrLoading, setAddrLoading] = useState(false);
+  const [zipLoading, setZipLoading] = useState(false);
+
   useEffect(() => {
     Promise.all([
       api.get('/auth/me'),
       api.get('/orders'),
+      api.get('/addresses'),
     ])
-      .then(([profileRes, ordersRes]) => {
+      .then(([profileRes, ordersRes, addrRes]) => {
         setProfile(profileRes.data.user);
         setOrders(ordersRes.data.orders || []);
+        setAddresses(addrRes.data.addresses || []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -120,6 +157,93 @@ export default function ProfilePage() {
       stored.avatar_url = null;
       localStorage.setItem('user', JSON.stringify(stored));
       window.location.reload();
+    } catch {}
+  }
+
+  function openAddressForm(addr = null) {
+    if (addr) {
+      setEditingAddress(addr.id);
+      setAddressForm({
+        label: addr.label || 'Home',
+        name: addr.name,
+        address: addr.address,
+        city: addr.city,
+        state: addr.state,
+        zip: addr.zip,
+        country: addr.country,
+        phone: addr.phone || '',
+      });
+    } else {
+      setEditingAddress(null);
+      setAddressForm(emptyAddress);
+    }
+    setAddrError('');
+    setShowAddressForm(true);
+  }
+
+  function closeAddressForm() {
+    setShowAddressForm(false);
+    setEditingAddress(null);
+    setAddressForm(emptyAddress);
+    setAddrError('');
+  }
+
+  async function handleAddressZipBlur() {
+    const zip = addressForm.zip;
+    if (!zip || zip.length < 3) return;
+    const country = addressForm.country || 'MX';
+    setZipLoading(true);
+    try {
+      const res = await fetch(`https://api.zippopotam.us/${country.toLowerCase()}/${zip}`);
+      if (res.ok) {
+        const data = await res.json();
+        const place = data.places?.[0];
+        if (place) {
+          setAddressForm(prev => ({
+            ...prev,
+            city: place['place name'] || prev.city,
+            state: place['state'] || prev.state,
+          }));
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setZipLoading(false);
+    }
+  }
+
+  async function handleSaveAddress(e) {
+    e.preventDefault();
+    setAddrError('');
+    setAddrLoading(true);
+    try {
+      if (editingAddress) {
+        await api.put(`/addresses/${editingAddress}`, addressForm);
+      } else {
+        await api.post('/addresses', addressForm);
+      }
+      const { data } = await api.get('/addresses');
+      setAddresses(data.addresses || []);
+      closeAddressForm();
+    } catch (err) {
+      setAddrError(err.response?.data?.error || 'Failed to save address');
+    } finally {
+      setAddrLoading(false);
+    }
+  }
+
+  async function handleDeleteAddress(id) {
+    try {
+      await api.delete(`/addresses/${id}`);
+      setAddresses(prev => prev.filter(a => a.id !== id));
+    } catch {}
+  }
+
+  async function handleSetDefault(id) {
+    try {
+      const { data } = await api.put(`/addresses/${id}/default`);
+      setAddresses(data.addresses || []);
     } catch {}
   }
 
@@ -247,6 +371,135 @@ export default function ProfilePage() {
             </form>
           )}
         </div>
+      </div>
+
+      {/* Shipping Addresses */}
+      <h2>Shipping Addresses</h2>
+      <div className="addresses-section">
+        {addresses.length === 0 && !showAddressForm && (
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem' }}>No saved addresses yet.</p>
+        )}
+
+        {!showAddressForm && (
+          <div className="address-cards">
+            {addresses.map(addr => (
+              <div key={addr.id} className={`address-card${addr.is_default ? ' address-default' : ''}`}>
+                <div className="address-card-header">
+                  <span className="address-label">{addr.label}</span>
+                  {addr.is_default && <span className="status-badge badge-active">Default</span>}
+                </div>
+                <div className="address-card-body">
+                  <strong>{addr.name}</strong><br />
+                  {addr.address}<br />
+                  {addr.city}, {addr.state} {addr.zip}<br />
+                  {COUNTRIES.find(c => c.code === addr.country)?.name || addr.country}
+                  {addr.phone && <><br />{addr.phone}</>}
+                </div>
+                <div className="address-card-actions">
+                  {!addr.is_default && (
+                    <button className="btn btn-sm" onClick={() => handleSetDefault(addr.id)}>Set Default</button>
+                  )}
+                  <button className="btn btn-sm" onClick={() => openAddressForm(addr)}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleDeleteAddress(addr.id)}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showAddressForm ? (
+          <form onSubmit={handleSaveAddress} className="shipping-form" style={{ marginTop: 0 }}>
+            <h3>{editingAddress ? 'Edit Address' : 'New Address'}</h3>
+            {addrError && <div className="alert alert-error">{addrError}</div>}
+            <div className="shipping-grid">
+              <div className="form-group">
+                <label>Label *</label>
+                <select
+                  value={addressForm.label}
+                  onChange={e => setAddressForm(prev => ({ ...prev, label: e.target.value }))}
+                  required
+                >
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Full Name *</label>
+                <input
+                  value={addressForm.name}
+                  onChange={e => setAddressForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Phone</label>
+                <input
+                  value={addressForm.phone}
+                  onChange={e => setAddressForm(prev => ({ ...prev, phone: e.target.value }))}
+                  type="tel"
+                />
+              </div>
+              <div className="form-group">
+                <label>Country *</label>
+                <select
+                  value={addressForm.country}
+                  onChange={e => setAddressForm(prev => ({ ...prev, country: e.target.value }))}
+                  required
+                >
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>ZIP / Postal Code * {zipLoading && '(searching...)'}</label>
+                <input
+                  value={addressForm.zip}
+                  onChange={e => setAddressForm(prev => ({ ...prev, zip: e.target.value }))}
+                  onBlur={handleAddressZipBlur}
+                  required
+                  placeholder="Enter ZIP to auto-fill"
+                />
+              </div>
+              <div className="form-group">
+                <label>State / Province *</label>
+                <input
+                  value={addressForm.state}
+                  onChange={e => setAddressForm(prev => ({ ...prev, state: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>City *</label>
+                <input
+                  value={addressForm.city}
+                  onChange={e => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group full-width">
+                <label>Address *</label>
+                <input
+                  value={addressForm.address}
+                  onChange={e => setAddressForm(prev => ({ ...prev, address: e.target.value }))}
+                  required
+                  placeholder="Street, number, apartment..."
+                />
+              </div>
+            </div>
+            <div className="cart-actions">
+              <button type="button" className="btn" onClick={closeAddressForm}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={addrLoading}>
+                {addrLoading ? 'Saving...' : 'Save Address'}
+              </button>
+            </div>
+          </form>
+        ) : addresses.length < 3 && (
+          <button className="btn btn-primary" onClick={() => openAddressForm()} style={{ marginTop: '0.75rem' }}>
+            + Add Address
+          </button>
+        )}
       </div>
 
       <h2>Purchase Summary</h2>

@@ -17,6 +17,10 @@ export default function AdminPage() {
           <h2>Stock & Sales</h2>
           <p>View inventory levels, out of stock alerts, and sales summary.</p>
         </Link>
+        <Link to="/admin/shipments" className="admin-card">
+          <h2>Shipments</h2>
+          <p>View shipment status, retry failed labels, and manage shipping.</p>
+        </Link>
       </div>
     </div>
   );

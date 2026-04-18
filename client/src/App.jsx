@@ -18,6 +18,7 @@ import AdminPage from './pages/AdminPage';
 import AdminProductsPage from './pages/AdminProductsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminStockPage from './pages/AdminStockPage';
+import AdminShipmentsPage from './pages/AdminShipmentsPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminRoute from './components/AdminRoute';
 
@@ -59,6 +60,9 @@ export default function App() {
               } />
               <Route path="/admin/stock" element={
                 <AdminRoute><AdminStockPage /></AdminRoute>
+              } />
+              <Route path="/admin/shipments" element={
+                <AdminRoute><AdminShipmentsPage /></AdminRoute>
               } />
             </Routes>
           </Layout>
