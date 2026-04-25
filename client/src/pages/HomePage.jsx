@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard';
 import ParticleBackground from '../components/ParticleBackground';
 import gorilaImg from '../assets/gorila.png';
 import logoMonogram from '../assets/Frente.png';
+import ImagenFrontal from '../assets/1776839197451.jpeg';
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);
@@ -45,132 +46,167 @@ export default function HomePage() {
 
   return (
     <div>
-      <section className="hero">
-        <div className="hero-content">
-          <div className="hero-text">
-            <img src={logoMonogram} alt="KM" className="hero-monogram" />
-            <h1 className="hero-title">Kong Montoya</h1>
-            <p className="hero-subtitle">Streetwear with attitude. Unleash your style.</p>
-            <a href="#products" className="btn btn-primary btn-lg">Shop Now</a>
+      {/* HERO SECTION - STAY HUNGRY */}
+      <section className="hero-new">
+        <div className="hero-new-container">
+          <div className="hero-new-image">
+            <img 
+              src={ImagenFrontal} 
+              alt="Stay Hungry" 
+              className="hero-new-img"
+            />
           </div>
-          <div className="hero-image">
-            <img src={gorilaImg} alt="Kong Montoya mascot" />
-          </div>
-        </div>
-      </section>
-
-      <section className="about-us">
-        <div className="about-us-inner">
-          <h2 className="about-us-title">Quiénes Somos</h2>
-          <div className="about-us-content">
-            <div className="about-us-text">
-              <p className="about-us-intro">
-                Somos <strong>Kong Montoya</strong>, una marca de streetwear nacida en Sonora, México.
-                Creemos que la ropa es una extensión de tu actitud — cada prenda está diseñada para
-                quienes no siguen tendencias, las crean.
+          <div className="hero-new-content">
+            <div className="hero-new-text">
+              <h1 className="hero-new-title">STAY<br />HUNGRY</h1>
+              <p className="hero-new-subtitle">
+                Never settle. Never follow.<br />
+                For those who create, not imitate.
               </p>
-              <div className="about-us-values">
-                <div className="about-value">
-                  <span className="about-value-icon">▪</span>
-                  <div>
-                    <h4>Diseño Original</h4>
-                    <p>Cada pieza nace de ideas propias, con identidad única y atención al detalle.</p>
-                  </div>
-                </div>
-                <div className="about-value">
-                  <span className="about-value-icon">▪</span>
-                  <div>
-                    <h4>Calidad Real</h4>
-                    <p>Materiales seleccionados para que tu ropa aguante tu ritmo de vida.</p>
-                  </div>
-                </div>
-                <div className="about-value">
-                  <span className="about-value-icon">▪</span>
-                  <div>
-                    <h4>Hecho en México</h4>
-                    <p>Orgullosamente producido en Sonora, apoyando talento y manufactura local.</p>
-                  </div>
-                </div>
+              <div className="hero-new-buttons">
+                <a href="#products" className="hero-new-btn hero-new-btn-primary">
+                  SHOP NOW
+                </a>
+                <a href="#products" className="hero-new-btn hero-new-btn-secondary">
+                  EXPLORE
+                </a>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ==================== QUIÉNES SOMOS - DISEÑO HORIZONTAL CON MÁS INFORMACIÓN ==================== */}
+      <section className="about-horizontal">
+        <div className="about-horizontal-container">
+          <h2 className="about-horizontal-title">QUIÉNES SOMOS</h2>
+          
+          <p className="about-horizontal-intro">
+            <strong>Kong Montoya</strong> nace del ring. De la historia real de un boxeador que 
+            aprendió a levantarse más veces de las que cayó. No es solo ropa, es una extensión 
+            de tu actitud — para quienes no siguen tendencias, las crean.
+          </p>
+
+          <div className="about-horizontal-grid">
+            {/* Tarjeta 1 - NACIDA DEL RING */}
+            <div className="about-horizontal-card">
+              <div className="about-horizontal-icon">🥊</div>
+              <h3>NACIDA DEL RING</h3>
+              <p>Esta marca surge de la historia real de un boxeador que aprendió a levantarse más veces de las que cayó.</p>
+              <div className="about-horizontal-detail">
+                <span>Disciplina</span>
+                <span>Constancia</span>
+                <span>Lucha</span>
+              </div>
+            </div>
+
+            {/* Tarjeta 2 - FORJA TU CARÁCTER */}
+            <div className="about-horizontal-card">
+              <div className="about-horizontal-icon">⚡</div>
+              <h3>FORJA TU CARÁCTER</h3>
+              <p>No es ropa para aparentar fortaleza. Es para quienes la están construyendo día a día. Para los que creen en el sacrificio.</p>
+              <div className="about-horizontal-detail">
+                <span>Sacrificio</span>
+                <span>Ambición</span>
+                <span>Corazón</span>
+              </div>
+            </div>
+
+            {/* Tarjeta 3 - LA PELEA NUNCA TERMINA */}
+            <div className="about-horizontal-card">
+              <div className="about-horizontal-icon">👊</div>
+              <h3>LA PELEA NUNCA TERMINA</h3>
+              <p>Diseñada para quienes enfrentan sus combates en el gimnasio, en el trabajo o en la vida. STAY HUNGRY.</p>
+              <div className="about-horizontal-detail">
+                <span>Resistencia</span>
+                <span>Libertad</span>
+                <span>Pasión</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Cita inspiracional adicional */}
+          <div className="about-horizontal-footer">
+            <p>"No se trata solo de entrenar el cuerpo, sino de forjar el carácter."</p>
+            <span>— KONG MONTOYA</span>
+          </div>
+        </div>
+      </section>
+
+      {/* PRODUCTS SECTION */}
       <div id="products" className="products-section">
-      <ParticleBackground />
-      <div className="products-section-inner">
-      <h2 className="section-title">Products</h2>
-      <div className="category-filters">
-        <button
-          className={`btn ${!categoryId ? 'btn-primary' : ''}`}
-          onClick={() => setCategoryId('')}
-        >
-          All
-        </button>
-        {categories.map(cat => (
-          <button
-            key={cat.id}
-            className={`btn ${categoryId === cat.id ? 'btn-primary' : ''}`}
-            onClick={() => setCategoryId(cat.id)}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
+        <ParticleBackground />
+        <div className="products-section-inner">
+          <h2 className="section-title">Products</h2>
+          <div className="category-filters">
+            <button
+              className={`btn ${!categoryId ? 'btn-primary' : ''}`}
+              onClick={() => setCategoryId('')}
+            >
+              All
+            </button>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                className={`btn ${categoryId === cat.id ? 'btn-primary' : ''}`}
+                onClick={() => setCategoryId(cat.id)}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
 
-      <div className="price-filters">
-        <div className="price-range">
-          <label>Min $</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="0"
-            value={minPrice}
-            onChange={e => setMinPrice(e.target.value)}
-          />
-        </div>
-        <div className="price-range">
-          <label>Max $</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Any"
-            value={maxPrice}
-            onChange={e => setMaxPrice(e.target.value)}
-          />
-        </div>
-        <div className="price-range">
-          <label>Sort by</label>
-          <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <option value="">Default</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-          </select>
-        </div>
-        {(minPrice || maxPrice || sortBy) && (
-          <button className="btn btn-sm" onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy(''); }}>
-            Clear
-          </button>
-        )}
-      </div>
+          <div className="price-filters">
+            <div className="price-range">
+              <label>Min $</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                value={minPrice}
+                onChange={e => setMinPrice(e.target.value)}
+              />
+            </div>
+            <div className="price-range">
+              <label>Max $</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Any"
+                value={maxPrice}
+                onChange={e => setMaxPrice(e.target.value)}
+              />
+            </div>
+            <div className="price-range">
+              <label>Sort by</label>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <option value="">Default</option>
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+              </select>
+            </div>
+            {(minPrice || maxPrice || sortBy) && (
+              <button className="btn btn-sm" onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy(''); }}>
+                Clear
+              </button>
+            )}
+          </div>
 
-      {loading ? (
-        <p>Loading products...</p>
-      ) : filtered.length === 0 ? (
-        <p>No products found.</p>
-      ) : (
-        <div className="product-grid">
-          {filtered.map(p => (
-            <ProductCard key={p.id} product={p} />
-          ))}
+          {loading ? (
+            <p>Loading products...</p>
+          ) : filtered.length === 0 ? (
+            <p>No products found.</p>
+          ) : (
+            <div className="product-grid">
+              {filtered.map(p => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      </div>
       </div>
     </div>
-);
+  );
 }
-
