@@ -15,18 +15,15 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // Cerrar menú al cambiar de ruta
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Evitar scroll del body cuando el menú está abierto
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
 
-  // Efecto de scroll
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -35,7 +32,6 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Animación del badge del carrito
   useEffect(() => {
     if (cartCount > 0) {
       const badge = document.querySelector('.cart-badge');
@@ -60,7 +56,6 @@ export default function Navbar() {
           <span>Kong Montoya</span>
         </Link>
 
-        {/* Links de escritorio */}
         <div className="navbar-links navbar-desktop">
           <button className="theme-toggle" onClick={toggle} title={dark ? 'Modo claro' : 'Modo oscuro'}>
             {dark ? '☀️' : '🌙'}
@@ -69,6 +64,7 @@ export default function Navbar() {
           <Link to="/cart" className="cart-link">
             Carrito {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
           </Link>
+          
           {isAuthenticated ? (
             <>
               <Link to="/orders">Mis Pedidos</Link>
@@ -79,9 +75,11 @@ export default function Navbar() {
                   {user.avatar_url ? (
                     <img src={resolveImageUrl(user.avatar_url)} alt={user.name} className="navbar-avatar" />
                   ) : (
-                    <span className="navbar-avatar navbar-avatar-default">{user.name.charAt(0).toUpperCase()}</span>
+                    <span className="navbar-avatar-default">
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                    </span>
                   )}
-                  <span>{user.name}</span>
+                  <span>{user.name?.split(' ')[0] || user.name}</span>
                 </div>
                 <div className="dropdown-menu">
                   <Link to="/profile">👤 Mi Perfil</Link>
@@ -99,7 +97,6 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile: carrito + hamburguesa */}
         <div className="navbar-mobile-actions">
           <Link to="/cart" className="cart-link">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -114,33 +111,26 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Overlay del menú móvil */}
       {menuOpen && <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)} />}
 
-      {/* Menú móvil */}
+      {/* Mobile drawer - VERSIÓN CORREGIDA */}
       <div className={`mobile-menu ${menuOpen ? 'mobile-menu-open' : ''}`}>
-        {/* Header con logo y botón cerrar */}
+        
         <div className="mobile-menu-header">
           <div className="mobile-menu-header-brand">
             <img src={logoMonogram} alt="Kong Montoya" className="mobile-menu-logo" />
             <span>Kong Montoya</span>
           </div>
-          <button 
-            className="mobile-menu-close" 
-            onClick={() => setMenuOpen(false)}
-          >
-            ✕
-          </button>
+          <button className="mobile-menu-close" onClick={() => setMenuOpen(false)}>✕</button>
         </div>
 
-        {/* Perfil del usuario (solo si está autenticado) */}
         {isAuthenticated && (
           <div className="mobile-menu-user">
             {user.avatar_url ? (
               <img src={resolveImageUrl(user.avatar_url)} alt={user.name} className="mobile-menu-avatar" />
             ) : (
               <div className="mobile-menu-avatar-default">
-                {user.name.charAt(0).toUpperCase()}
+                {user.name?.charAt(0).toUpperCase() || 'U'}
               </div>
             )}
             <div className="mobile-menu-user-info">
@@ -150,7 +140,6 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Links principales */}
         <div className="mobile-menu-links">
           <Link to="/" onClick={() => setMenuOpen(false)}>
             <span className="mobile-menu-icon">🏠</span>
@@ -161,7 +150,7 @@ export default function Navbar() {
             <span>Carrito</span>
             {cartCount > 0 && <span className="mobile-menu-badge">{cartCount}</span>}
           </Link>
-
+          
           {isAuthenticated ? (
             <>
               <Link to="/orders" onClick={() => setMenuOpen(false)}>
@@ -193,18 +182,11 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Footer con acciones */}
         <div className="mobile-menu-footer">
           <button className="mobile-menu-theme-toggle" onClick={toggle}>
             <span className="mobile-menu-icon">{dark ? '☀️' : '🌙'}</span>
             <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
           </button>
-          {isAuthenticated && (
-            <button onClick={handleLogout} className="mobile-menu-logout">
-              <span className="mobile-menu-icon">🚪</span>
-              <span>Cerrar Sesión</span>
-            </button>
-          )}
         </div>
       </div>
     </nav>
