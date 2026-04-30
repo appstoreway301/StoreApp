@@ -4,7 +4,7 @@ import ProductCard from '../components/ProductCard';
 import ParticleBackground from '../components/ParticleBackground';
 import gorilaImg from '../assets/gorila.png';
 import logoMonogram from '../assets/Frente.png';
-import ImagenFrontal from '../assets/1776839197451.jpeg';
+import ImagenFrontal from '../assets/gorila.png';
 
 export default function HomePage() {
   const [products, setProducts] = useState([]);

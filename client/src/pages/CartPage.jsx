@@ -131,7 +131,6 @@ export default function CartPage() {
     }
     setShowShipping(true);
     setError('');
-    // Si ya tiene direcciones guardadas, saltar directo a quotes
     if (savedAddresses.length > 0) {
       setShowQuotes(true);
     }
@@ -178,7 +177,6 @@ export default function CartPage() {
     } catch (err) {
       const errorData = err.response?.data;
       setError(errorData?.error || 'Could not start checkout');
-      // If carrier failed, go back to quote selection so user can pick another
       if (errorData?.carrierError) {
         setSelectedQuote(null);
       }
@@ -186,11 +184,32 @@ export default function CartPage() {
     }
   }
 
+  // ==================== CARRITO VACÍO ====================
   if (items.length === 0) {
     return (
-      <div>
-        <h1>Your Cart</h1>
-        <p>Your cart is empty.</p>
+      <div className="cart-empty">
+        <div className="cart-empty-content">
+          <div className="cart-empty-svg">
+            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 4H5L6.8 12.5C7 13.3 7.7 13.8 8.5 13.8H17C17.8 13.8 18.5 13.3 18.7 12.5L20 7H6" 
+                    stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 7H20" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="9" cy="19" r="1.8" fill="var(--accent)"/>
+              <circle cx="17" cy="19" r="1.8" fill="var(--accent)"/>
+            </svg>
+          </div>
+          <h1>TU CARRITO ESTÁ VACÍO</h1>
+          <p className="cart-empty-message">
+            No dejes que tu actitud se quede sin outfit.<br />
+            Descubre nuestra colección y encuentra tu estilo.
+          </p>
+          <button 
+            className="btn btn-primary cart-empty-btn"
+            onClick={() => navigate('/#products')}
+          >
+            EXPLORAR PRODUCTOS →
+          </button>
+        </div>
       </div>
     );
   }
@@ -198,9 +217,19 @@ export default function CartPage() {
   const grandTotal = cartTotal + (selectedQuote?.priceCents || 0);
 
   return (
-    <div>
-      <h1>Your Cart</h1>
+    <div className="cart-page">
+      <h1 className="cart-page-title">TU CARRITO</h1>
+      
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Cabecera del carrito (solo desktop) */}
+      <div className="cart-header">
+        <span>Producto</span>
+        <span>Precio</span>
+        <span>Cantidad</span>
+        <span>Subtotal</span>
+        <span></span>
+      </div>
 
       <div className="cart-items">
         {items.map(item => (
@@ -209,164 +238,186 @@ export default function CartPage() {
       </div>
 
       <div className="cart-summary">
-        <div className="cart-total">
-          <span>Subtotal:</span>
-          <strong>{formatPrice(cartTotal)}</strong>
+        {/* Frase motivacional */}
+        <div className="cart-motivation">
+          <p>💪 Cada prenda es una extensión de tu actitud. Completa tu compra.</p>
         </div>
 
-        {selectedQuote && (
-          <div className="cart-total" style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
-            <span>Shipping ({selectedQuote.carrier}):</span>
-            <span>{formatPrice(selectedQuote.priceCents)}</span>
+        <div className="cart-summary-inner">
+          <div className="cart-summary-row">
+            <span>Subtotal:</span>
+            <strong>{formatPrice(cartTotal)}</strong>
           </div>
-        )}
 
-        {selectedQuote && (
-          <div className="cart-total" style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
+          {selectedQuote && (
+            <div className="cart-summary-row">
+              <span>Envío ({selectedQuote.carrier}):</span>
+              <span>{formatPrice(selectedQuote.priceCents)}</span>
+            </div>
+          )}
+
+          {!showShipping && !selectedQuote && (
+            <div className="cart-summary-row cart-summary-shipping">
+              <span>Envío:</span>
+              <span>Calculado después</span>
+            </div>
+          )}
+
+          <div className="cart-summary-total">
             <span>Total:</span>
-            <strong>{formatPrice(grandTotal)}</strong>
+            <strong>{formatPrice(selectedQuote ? grandTotal : cartTotal)}</strong>
           </div>
-        )}
 
-        {/* Step 1: Proceed to checkout */}
-        {!showShipping ? (
-          <div className="cart-actions">
-            <button className="btn" onClick={clearCart}>Clear Cart</button>
-            <button className="btn btn-primary" onClick={handleProceed}>
-              Proceed to Checkout
-            </button>
-          </div>
-        ) : !showQuotes ? (
-          /* Step 2: Shipping address form */
-          <form onSubmit={handleGetQuotes} className="shipping-form">
-            <h3>Shipping Address</h3>
-            <div className="shipping-grid">
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input name="name" value={shipping.name} onChange={handleShippingChange} required />
-              </div>
-              <div className="form-group">
-                <label>Phone</label>
-                <input name="phone" value={shipping.phone} onChange={handleShippingChange} type="tel" />
-              </div>
-              <div className="form-group">
-                <label>Country *</label>
-                <select name="country" value={shipping.country} onChange={handleShippingChange} required>
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.code}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>ZIP / Postal Code * {zipLoading && '(searching...)'}</label>
-                <input
-                  name="zip"
-                  value={shipping.zip}
-                  onChange={handleZipChange}
-                  onBlur={handleZipBlur}
-                  required
-                  placeholder="Enter ZIP to auto-fill"
-                />
-              </div>
-              <div className="form-group">
-                <label>State / Province *</label>
-                <input name="state" value={shipping.state} onChange={handleShippingChange} required />
-              </div>
-              <div className="form-group">
-                <label>City *</label>
-                <input name="city" value={shipping.city} onChange={handleShippingChange} required />
-              </div>
-              <div className="form-group full-width">
-                <label>Address *</label>
-                <input name="address" value={shipping.address} onChange={handleShippingChange} required placeholder="Street, number, apartment..." />
-              </div>
-            </div>
+          {/* Step 1: Proceed to checkout */}
+          {!showShipping ? (
             <div className="cart-actions">
-              <button type="button" className="btn" onClick={() => setShowShipping(false)}>Back</button>
-              <button type="submit" className="btn btn-primary">
-                Get Shipping Quotes
+              <button className="btn btn-outline" onClick={clearCart}>
+                Vaciar carrito
+              </button>
+              <button className="btn btn-primary" onClick={handleProceed}>
+                Proceder al pago →
               </button>
             </div>
-            <div className="alert-warning">
-              <svg className="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              <span>Please verify that your shipping address is correct before proceeding. Orders shipped to an incorrect address cannot be refunded.</span>
-            </div>
-          </form>
-        ) : (
-          /* Step 3: Select shipping method & pay */
-          <div className="shipping-form">
-            <h3>Shipping To</h3>
-
-            {/* Selector de direcciones guardadas */}
-            {savedAddresses.length > 1 && (
-              <div className="address-selector" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                {savedAddresses.map(addr => {
-                  const isSelected = shipping.name === addr.name && shipping.address === addr.address && shipping.zip === addr.zip;
-                  return (
-                    <button
-                      key={addr.id}
-                      type="button"
-                      className={`btn btn-sm${isSelected ? ' btn-primary' : ''}`}
-                      onClick={() => { selectSavedAddress(addr); setSelectedQuote(null); }}
-                    >
-                      {addr.label}
-                    </button>
-                  );
-                })}
+          ) : !showQuotes ? (
+            /* Step 2: Shipping address form */
+            <form onSubmit={handleGetQuotes} className="shipping-form">
+              <h3>Dirección de envío</h3>
+              <div className="shipping-grid">
+                <div className="form-group">
+                  <label>Nombre completo *</label>
+                  <input name="name" value={shipping.name} onChange={handleShippingChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Teléfono</label>
+                  <input name="phone" value={shipping.phone} onChange={handleShippingChange} type="tel" />
+                </div>
+                <div className="form-group">
+                  <label>País *</label>
+                  <select name="country" value={shipping.country} onChange={handleShippingChange} required>
+                    {COUNTRIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Código postal * {zipLoading && '(buscando...)'}</label>
+                  <input
+                    name="zip"
+                    value={shipping.zip}
+                    onChange={handleZipChange}
+                    onBlur={handleZipBlur}
+                    required
+                    placeholder="Ingresa tu código postal"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Estado / Provincia *</label>
+                  <input name="state" value={shipping.state} onChange={handleShippingChange} required />
+                </div>
+                <div className="form-group">
+                  <label>Ciudad *</label>
+                  <input name="city" value={shipping.city} onChange={handleShippingChange} required />
+                </div>
+                <div className="form-group full-width">
+                  <label>Dirección *</label>
+                  <input name="address" value={shipping.address} onChange={handleShippingChange} required placeholder="Calle, número, colonia..." />
+                </div>
               </div>
-            )}
-
-            <div className="shipping-address-summary" style={{
-              padding: '0.75rem 1rem',
-              background: 'var(--bg)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1rem',
-              fontSize: '0.88rem',
-              color: 'var(--text-secondary)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}>
-              <div>
-                <strong style={{ color: 'var(--text)' }}>{shipping.name}</strong><br />
-                {shipping.address}, {shipping.city}, {shipping.state} {shipping.zip}<br />
-                {COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country}
-                {shipping.phone && <><br />{shipping.phone}</>}
+              <div className="cart-actions">
+                <button type="button" className="btn btn-outline" onClick={() => setShowShipping(false)}>Atrás</button>
+                <button type="submit" className="btn btn-primary">
+                  Obtener cotización de envío
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn"
-                style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap' }}
-                onClick={handleBackToAddress}
-              >
-                Edit
-              </button>
-            </div>
+              <div className="alert-warning">
+                <svg className="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span>Verifica que tu dirección sea correcta. Los pedidos enviados a una dirección incorrecta no pueden ser reembolsados.</span>
+              </div>
+            </form>
+          ) : (
+            /* Step 3: Select shipping method & pay */
+            <div className="shipping-form">
+              <h3>Envío a</h3>
 
-            <ShippingQuotes
-              shipping={shipping}
-              selected={selectedQuote}
-              onSelect={setSelectedQuote}
-            />
+              {/* Selector de direcciones guardadas */}
+              {savedAddresses.length > 1 && (
+                <div className="address-selector" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  {savedAddresses.map(addr => {
+                    const isSelected = shipping.name === addr.name && shipping.address === addr.address && shipping.zip === addr.zip;
+                    return (
+                      <button
+                        key={addr.id}
+                        type="button"
+                        className={`btn btn-sm${isSelected ? ' btn-primary' : ''}`}
+                        onClick={() => { selectSavedAddress(addr); setSelectedQuote(null); }}
+                      >
+                        {addr.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-            <div className="cart-actions" style={{ marginTop: '1rem' }}>
-              <button type="button" className="btn" onClick={handleBackToAddress}>Back</button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={!selectedQuote || checkoutLoading}
-                onClick={handleCheckout}
-              >
-                {checkoutLoading ? 'Redirecting...' : `Confirm & Pay ${selectedQuote ? formatPrice(grandTotal) : ''}`}
-              </button>
+              <div className="shipping-address-summary" style={{
+                padding: '0.75rem 1rem',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-sm)',
+                marginBottom: '1rem',
+                fontSize: '0.88rem',
+                color: 'var(--text-secondary)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.5rem',
+              }}>
+                <div>
+                  <strong style={{ color: 'var(--text)' }}>{shipping.name}</strong><br />
+                  {shipping.address}, {shipping.city}, {shipping.state} {shipping.zip}<br />
+                  {COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country}
+                  {shipping.phone && <><br />{shipping.phone}</>}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap' }}
+                  onClick={handleBackToAddress}
+                >
+                  Editar
+                </button>
+              </div>
+
+              <ShippingQuotes
+                shipping={shipping}
+                selected={selectedQuote}
+                onSelect={setSelectedQuote}
+              />
+
+              <div className="cart-actions" style={{ marginTop: '1rem' }}>
+                <button type="button" className="btn btn-outline" onClick={handleBackToAddress}>Atrás</button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!selectedQuote || checkoutLoading}
+                  onClick={handleCheckout}
+                >
+                  {checkoutLoading ? 'Redirigiendo...' : `Confirmar y pagar ${selectedQuote ? formatPrice(grandTotal) : ''}`}
+                </button>
+              </div>
             </div>
+          )}
+
+          {/* Mensaje de garantía */}
+          <div className="cart-guarantee">
+            <span>🔒</span>
+            <span>Envíos seguros a todo México. Garantía de devolución.</span>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
