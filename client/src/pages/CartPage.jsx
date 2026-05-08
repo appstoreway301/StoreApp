@@ -225,9 +225,8 @@ export default function CartPage() {
       {/* Cabecera del carrito (solo desktop) */}
       <div className="cart-header">
         <span>Producto</span>
-        <span>Precio</span>
         <span>Cantidad</span>
-        <span>Subtotal</span>
+        <span>Precio</span>
         <span></span>
       </div>
 
