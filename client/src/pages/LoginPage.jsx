@@ -31,12 +31,12 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <h1>Login</h1>
+      <h1>Iniciar Sesión</h1>
       <form onSubmit={handleSubmit} className="auth-form">
         {success && <div className="alert alert-success">{success}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
-        <label>Email</label>
+        <label>Correo</label>
         <input
           type="email"
           value={email}
@@ -44,7 +44,7 @@ export default function LoginPage() {
           required
         />
 
-        <label>Password</label>
+        <label>Contraseña</label>
         <input
           type="password"
           value={password}
@@ -53,11 +53,11 @@ export default function LoginPage() {
         />
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? 'Logging in...' : 'Acceder'}
         </button>
       </form>
       <p className="auth-alt">
-        Don't have an account? <Link to="/register">Register</Link>
+        ¿No tienes una cuenta? <Link to="/register">Registrarse</Link>
       </p>
     </div>
   );

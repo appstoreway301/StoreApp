@@ -18,34 +18,37 @@ export default function RegisterPage() {
       const { data } = await api.post('/auth/send-verification', { email });
       setSuccess(data.message);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send verification email');
+      setError(err.response?.data?.error || 'Error al enviar el correo de verificación');
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="auth-page">
-      <h1>Create Account</h1>
-      <p>Enter your email to get started. We'll send you a verification link.</p>
-      <form onSubmit={handleSubmit} className="auth-form">
+    <div className="register-page">
+      <h1>Crear cuenta</h1>
+      <p>Ingresa tu correo para comenzar. Te enviaremos un enlace de verificación.</p>
+      
+      <form onSubmit={handleSubmit} className="register-form">
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}
 
-        <label>Email</label>
+        <label>Correo electrónico</label>
         <input
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
+          placeholder="tu@email.com"
         />
 
         <button type="submit" className="btn btn-primary" disabled={loading}>
-          {loading ? 'Sending...' : 'Send Verification Email'}
+          {loading ? 'Enviando...' : 'Enviar correo de verificación'}
         </button>
       </form>
-      <p className="auth-alt">
-        Already have an account? <Link to="/login">Login</Link>
+      
+      <p className="register-alt">
+        ¿Ya tienes una cuenta? <Link to="/login">Iniciar sesión</Link>
       </p>
     </div>
   );

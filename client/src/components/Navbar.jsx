@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ShoppingBag, Menu, X, User, Sun, Moon, LogOut, Package, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useTheme } from '../context/ThemeContext';
-import logoMonogram from '../assets/Frente.png';
 import { resolveImageUrl } from '../utils/imageUrl';
+import logoMonogram from '../assets/Frente.png';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -12,183 +13,180 @@ export default function Navbar() {
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(true);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
+  // Efecto de scroll
   useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
-
-  useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [menuOpen]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Cerrar dropdown al hacer clic fuera
   useEffect(() => {
-    if (cartCount > 0) {
-      const badge = document.querySelector('.cart-badge');
-      if (badge) {
-        badge.classList.add('pulse');
-        setTimeout(() => badge.classList.remove('pulse'), 500);
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
       }
-    }
-  }, [cartCount]);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
-  async function handleLogout() {
-    setMenuOpen(false);
+  // Cerrar menús al cambiar de ruta
+  useEffect(() => {
+    setMobileOpen(false);
+    setUserMenuOpen(false);
+  }, [location.pathname]);
+
+  const navLinks = [
+    { to: '/', label: 'INICIO' },
+    { to: '/products', label: 'PRODUCTOS' },
+    { to: '/about', label: 'NOSOTROS' },
+  ];
+
+  const handleLogout = async () => {
     await logout();
     navigate('/');
-  }
+  };
 
   return (
-    <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
-      <div className="navbar-content">
-        <Link to="/" className="navbar-brand">
-          <img src={logoMonogram} alt="Kong Montoya" className="navbar-logo" />
-          <span>Kong Montoya</span>
+    <nav className={`navbar-custom ${scrolled ? 'scrolled' : ''}`}>
+      <div className="navbar-custom-container">
+        {/* Logo con imagen */}
+        <Link to="/" className="navbar-custom-logo">
+          <img src={logoMonogram} alt="Kong Montoya" className="navbar-custom-logo-img" />
+          <span className="navbar-custom-logo-bold">KONG</span>
+          <span className="navbar-custom-logo-light">MONTOYA</span>
         </Link>
 
-        <div className="navbar-links navbar-desktop">
-          <button className="theme-toggle" onClick={toggle} title={dark ? 'Modo claro' : 'Modo oscuro'}>
-            {dark ? '☀️' : '🌙'}
-          </button>
-          <Link to="/">Productos</Link>
-          <Link to="/cart" className="cart-link">
-            Carrito {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-          </Link>
-          
-          {isAuthenticated ? (
-            <>
-              <Link to="/orders">Mis Pedidos</Link>
-              {user.role === 'admin' && <Link to="/admin">Admin</Link>}
+        {/* Desktop Nav Links */}
+        <div className="navbar-custom-desktop">
+          {navLinks.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`navbar-custom-link ${location.pathname === link.to ? 'active' : ''}`}
+            >
+              {link.label}
+              {location.pathname === link.to && <span className="navbar-custom-link-active" />}
+            </Link>
+          ))}
+        </div>
 
-              <div className="user-dropdown">
-                <div className="navbar-user-link">
-                  {user.avatar_url ? (
-                    <img src={resolveImageUrl(user.avatar_url)} alt={user.name} className="navbar-avatar" />
-                  ) : (
-                    <span className="navbar-avatar-default">
-                      {user.name?.charAt(0).toUpperCase() || 'U'}
-                    </span>
+        {/* Right Actions */}
+        <div className="navbar-custom-actions">
+          {/* Theme Toggle */}
+          <button onClick={toggle} className="navbar-custom-icon-btn" aria-label="Alternar tema">
+            {dark ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+
+          {/* Cart */}
+          <Link to="/cart" className="navbar-custom-cart">
+            <ShoppingBag size={18} />
+            {cartCount > 0 && <span className="navbar-custom-cart-badge">{cartCount}</span>}
+          </Link>
+
+          {/* User Menu Desktop */}
+          {isAuthenticated ? (
+            <div className="navbar-custom-user-dropdown" ref={menuRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="navbar-custom-user-btn"
+              >
+                {user?.avatar_url ? (
+                  <img src={resolveImageUrl(user.avatar_url)} alt={user.name} className="navbar-custom-avatar" />
+                ) : (
+                  <span className="navbar-custom-avatar-default">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                )}
+                <span className="navbar-custom-user-name">{user?.name?.split(' ')[0] || 'Usuario'}</span>
+                <ChevronDown size={12} className="navbar-custom-chevron" />
+              </button>
+              {userMenuOpen && (
+                <div className="navbar-custom-dropdown">
+                  <div className="navbar-custom-dropdown-header">
+                    <p className="navbar-custom-dropdown-name">{user?.name || 'Usuario'}</p>
+                    <p className="navbar-custom-dropdown-email">{user?.email}</p>
+                  </div>
+                  <Link to="/profile" className="navbar-custom-dropdown-item">
+                    <User size={14} /> Mi Perfil
+                  </Link>
+                  <Link to="/orders" className="navbar-custom-dropdown-item">
+                    <Package size={14} /> Mis Pedidos
+                  </Link>
+                  {user?.role === 'admin' && (
+                    <Link to="/admin" className="navbar-custom-dropdown-item">
+                      <span className="navbar-custom-dropdown-icon">⚙️</span> Admin
+                    </Link>
                   )}
-                  <span>{user.name?.split(' ')[0] || user.name}</span>
+                  <button onClick={handleLogout} className="navbar-custom-dropdown-item navbar-custom-dropdown-logout">
+                    <LogOut size={14} /> Cerrar Sesión
+                  </button>
                 </div>
-                <div className="dropdown-menu">
-                  <Link to="/profile">👤 Mi Perfil</Link>
-                  <Link to="/orders">📦 Mis Pedidos</Link>
-                  {user.role === 'admin' && <Link to="/admin">⚙️ Admin</Link>}
-                  <button onClick={handleLogout} className="dropdown-item">🚪 Cerrar Sesión</button>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <Link to="/login">Iniciar Sesión</Link>
-              <Link to="/register">Registrarse</Link>
-            </>
-          )}
-        </div>
-
-        <div className="navbar-mobile-actions">
-          <Link to="/cart" className="cart-link">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
-              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
-            </svg>
-            {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
-          </Link>
-          <button className={`hamburger ${menuOpen ? 'hamburger-open' : ''}`} onClick={() => setMenuOpen(!menuOpen)} aria-label="Menú">
-            <span /><span /><span />
-          </button>
-        </div>
-      </div>
-
-      {menuOpen && <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)} />}
-
-      {/* Mobile drawer - VERSIÓN CORREGIDA */}
-      <div className={`mobile-menu ${menuOpen ? 'mobile-menu-open' : ''}`}>
-        
-        <div className="mobile-menu-header">
-          <div className="mobile-menu-header-brand">
-            <img src={logoMonogram} alt="Kong Montoya" className="mobile-menu-logo" />
-            <span>Kong Montoya</span>
-          </div>
-          <button className="mobile-menu-close" onClick={() => setMenuOpen(false)}>✕</button>
-        </div>
-
-        {isAuthenticated && (
-          <div className="mobile-menu-user">
-            {user.avatar_url ? (
-              <img src={resolveImageUrl(user.avatar_url)} alt={user.name} className="mobile-menu-avatar" />
-            ) : (
-              <div className="mobile-menu-avatar-default">
-                {user.name?.charAt(0).toUpperCase() || 'U'}
-              </div>
-            )}
-            <div className="mobile-menu-user-info">
-              <div className="mobile-menu-name">{user.name}</div>
-              <div className="mobile-menu-role">{user.role === 'admin' ? 'Admin' : 'Cliente'}</div>
-            </div>
-          </div>
-        )}
-
-        <div className="mobile-menu-links">
-          <Link to="/" onClick={() => setMenuOpen(false)}>
-            <span className="mobile-menu-icon">🏠</span>
-            <span>Productos</span>
-          </Link>
-          <Link to="/cart" onClick={() => setMenuOpen(false)}>
-            <span className="mobile-menu-icon">🛒</span>
-            <span>Carrito</span>
-            {cartCount > 0 && <span className="mobile-menu-badge">{cartCount}</span>}
-          </Link>
-          
-          {isAuthenticated ? (
-            <>
-              <Link to="/orders" onClick={() => setMenuOpen(false)}>
-                <span className="mobile-menu-icon">📦</span>
-                <span>Mis Pedidos</span>
-              </Link>
-              <Link to="/profile" onClick={() => setMenuOpen(false)}>
-                <span className="mobile-menu-icon">👤</span>
-                <span>Mi Perfil</span>
-              </Link>
-              {user.role === 'admin' && (
-                <Link to="/admin" onClick={() => setMenuOpen(false)}>
-                  <span className="mobile-menu-icon">⚙️</span>
-                  <span>Admin</span>
-                </Link>
               )}
-            </>
+            </div>
           ) : (
-            <>
-              <Link to="/login" onClick={() => setMenuOpen(false)}>
-                <span className="mobile-menu-icon">🔐</span>
-                <span>Iniciar Sesión</span>
-              </Link>
-              <Link to="/register" onClick={() => setMenuOpen(false)}>
-                <span className="mobile-menu-icon">📝</span>
-                <span>Registrarse</span>
-              </Link>
-            </>
+            <Link to="/login" className="navbar-custom-login-btn">
+              ENTRAR
+            </Link>
           )}
-        </div>
 
-        <div className="mobile-menu-footer">
-          <button className="mobile-menu-theme-toggle" onClick={toggle}>
-            <span className="mobile-menu-icon">{dark ? '☀️' : '🌙'}</span>
-            <span>{dark ? 'Modo claro' : 'Modo oscuro'}</span>
+          {/* Mobile Menu Toggle */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="navbar-custom-mobile-toggle"
+            aria-label="Menú"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileOpen && (
+        <div className="navbar-custom-mobile">
+          <div className="navbar-custom-mobile-links">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`navbar-custom-mobile-link ${location.pathname === link.to ? 'active' : ''}`}
+                onClick={() => setMobileOpen(false)}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="navbar-custom-mobile-divider" />
+            {isAuthenticated ? (
+              <>
+                <Link to="/profile" className="navbar-custom-mobile-link" onClick={() => setMobileOpen(false)}>
+                  Mi Perfil
+                </Link>
+                <Link to="/orders" className="navbar-custom-mobile-link" onClick={() => setMobileOpen(false)}>
+                  Mis Pedidos
+                </Link>
+                {user?.role === 'admin' && (
+                  <Link to="/admin" className="navbar-custom-mobile-link" onClick={() => setMobileOpen(false)}>
+                    Administración
+                  </Link>
+                )}
+                <button onClick={handleLogout} className="navbar-custom-mobile-logout">
+                  Cerrar Sesión
+                </button>
+              </>
+            ) : (
+              <Link to="/login" className="navbar-custom-mobile-link" onClick={() => setMobileOpen(false)}>
+                INICIAR SESIÓN
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

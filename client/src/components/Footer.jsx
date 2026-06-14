@@ -1,71 +1,81 @@
 import { Link } from 'react-router-dom';
-import logoMonogram from '../assets/Frente.png';
-import gorilaImg from '../assets/gorila.png';
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="footer">
-      <div className="footer-container">
-        <div className="footer-grid">
+    <footer className="footer-original">
+      {/* Marquee Banner */}
+      <div className="footer-marquee">
+        <div className="footer-marquee-content">
+          {Array(8).fill(null).map((_, i) => (
+            <span key={i} className="footer-marquee-text">
+              STAY HUNGRY · LA PELEA NUNCA TERMINA · KONG MONTOYA ·
+            </span>
+          ))}
+        </div>
+      </div>
 
-          {/* Columna 1 - Logo y eslogan */}
-          <div className="footer-col">
-            <div className="footer-logo">
-              <img src={logoMonogram} alt="Kong Montoya" className="footer-logo-img" />
-              <span>KONG MONTOYA</span>
-            </div>
-            <p className="footer-phrase">STAY HUNGRY. LA PELEA NUNCA TERMINA.</p>
+      <div className="footer-original-container">
+        <div className="footer-original-grid">
+          {/* Brand Column */}
+          <div className="footer-original-brand">
+            <Link to="/" className="footer-original-logo">
+              <span className="footer-original-logo-bold">KONG</span>
+              <span className="footer-original-logo-light">MONTOYA</span>
+            </Link>
+            <p className="footer-original-tagline">
+              Streetwear para los que pelean. Cada prenda es un round ganado.
+            </p>
           </div>
 
-          {/* Columna 2 - EXPLORAR */}
-          <div className="footer-col">
-            <h4>EXPLORAR</h4>
+          {/* Explorar */}
+          <div className="footer-original-col">
+            <h4>Explorar</h4>
             <ul>
-              <li><Link to="/">Inicio</Link></li>
-              <li><Link to="#products">Productos</Link></li>
-              <li><Link to="/about">Sobre Nosotros</Link></li>
-              <li><Link to="/contact">Contacto</Link></li>
+              <li><Link to="/products">Tienda</Link></li>
+              <li><Link to="/products?category=tshirts">Camisetas</Link></li>
+              <li><Link to="/products?category=hoodies">Hoodies</Link></li>
+              <li><Link to="/products?category=accessories">Accesorios</Link></li>
             </ul>
           </div>
 
-          {/* Columna 3 - SOPORTE */}
-          <div className="footer-col">
-            <h4>SOPORTE</h4>
+          {/* Soporte */}
+          <div className="footer-original-col">
+            <h4>Soporte</h4>
             <ul>
-              <li><Link to="/faq">Preguntas Frecuentes</Link></li>
-              <li><Link to="/shipping">Envíos</Link></li>
-              <li><Link to="/returns">Devoluciones</Link></li>
-              <li><Link to="/size-guide">Guía de Tallas</Link></li>
+              <li><Link to="/orders">Mis Pedidos</Link></li>
+              <li><span>Envíos</span></li>
+              <li><span>Devoluciones</span></li>
+              <li><span>FAQ</span></li>
             </ul>
           </div>
 
-          {/* Columna 4 - LEGAL */}
-          <div className="footer-col">
-            <h4>LEGAL</h4>
+          {/* Legal */}
+          <div className="footer-original-col">
+            <h4>Legal</h4>
             <ul>
-              <li><Link to="/privacy">Política de Privacidad</Link></li>
-              <li><Link to="/terms">Términos y Condiciones</Link></li>
-              <li><Link to="/cookies">Política de Cookies</Link></li>
+              <li><span>Privacidad</span></li>
+              <li><span>Términos</span></li>
+              <li><span>Cookies</span></li>
             </ul>
           </div>
 
-          {/* Columna 5 - SÍGUENOS */}
-          <div className="footer-col">
-            <h4>SÍGUENOS</h4>
-            <ul className="footer-social">
+          {/* Redes */}
+          <div className="footer-original-col">
+            <h4>Redes</h4>
+            <ul>
               <li><a href="https://www.instagram.com/kongmontoya_store/" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-              <li><a href="#" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
               <li><a href="#" target="_blank" rel="noopener noreferrer">TikTok</a></li>
-              <li><a href="#" target="_blank" rel="noopener noreferrer">YouTube</a></li>
+              <li><a href="#" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
             </ul>
           </div>
-
         </div>
 
-        {/* Copyright */}
-        <div className="footer-bottom">
-          <p>&copy; {new Date().getFullYear()} Kong Montoya. Todos los derechos reservados.</p>
-          <p className="footer-made">Hecho en Sonora, México 🇲🇽</p>
+        {/* Bottom Bar */}
+        <div className="footer-original-bottom">
+          <p>© {currentYear} KONG MONTOYA. TODOS LOS DERECHOS RESERVADOS.</p>
+          <p>STAY HUNGRY. LA PELEA NUNCA TERMINA.</p>
         </div>
       </div>
     </footer>

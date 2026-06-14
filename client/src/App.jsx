@@ -5,6 +5,7 @@ import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';  // ← IMPORTAR AboutPage
 import ProductPage from './pages/ProductPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -31,6 +32,7 @@ export default function App() {
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/about" element={<AboutPage />} />  {/* ← NUEVA RUTA */}
               <Route path="/products/:id" element={<ProductPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
