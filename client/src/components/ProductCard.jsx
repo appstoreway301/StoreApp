@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { resolveImageUrl } from '../utils/imageUrl';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, showSizes = true }) {
   const { addItem } = useCart();
 
   function formatPrice(cents) {
@@ -14,21 +14,30 @@ export default function ProductCard({ product }) {
     addItem(product);
   }
 
-  const cats = product.categories || [];
+  // Tallas fijas para mostrar (placeholder)
+  const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
 
   return (
-    <Link to={`/products/${product.id}`} className="product-card">
-      <img src={resolveImageUrl(product.image_url)} alt={product.name} className="product-card-img" />
-      <div className="product-card-body">
-        <div className="tags-display">
-          {cats.map(c => (
-            <span key={c.id} className="tag tag-small">{c.name}</span>
-          ))}
-        </div>
+    <Link to={`/product/${product.id}`} className="product-card">
+      <div className="product-card-image">
+        <img src={resolveImageUrl(product.image_url)} alt={product.name} />
+      </div>
+      <div className="product-card-info">
+        <span className="product-card-category">{product.category || 'COLECCIÓN'}</span>
         <h3 className="product-card-title">{product.name}</h3>
         <p className="product-card-price">{formatPrice(product.price_cents)}</p>
-        <button onClick={handleAdd} className="btn btn-primary">
-          Add to Cart
+        
+        {/* Tallas fijas */}
+        {showSizes && (
+          <div className="product-card-sizes">
+            {sizes.map((size) => (
+              <span key={size} className="product-card-size">{size}</span>
+            ))}
+          </div>
+        )}
+        
+        <button onClick={handleAdd} className="btn btn-primary btn-sm">
+          Agregar
         </button>
       </div>
     </Link>

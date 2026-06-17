@@ -5,7 +5,7 @@ export default function Layout({ children }) {
   return (
     <div className="app">
       <Navbar />
-      <main className="container">{children}</main>
+      <main>{children}</main>
       <Footer />
     </div>
   );
