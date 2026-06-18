@@ -21,6 +21,7 @@ import AdminProductsPage from './pages/AdminProductsPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import AdminStockPage from './pages/AdminStockPage';
 import AdminShipmentsPage from './pages/AdminShipmentsPage';
+import AdminBranchesPage from './pages/AdminBranchesPage';
 import ProfilePage from './pages/ProfilePage';
 import AdminRoute from './components/AdminRoute';
 
@@ -64,6 +65,9 @@ export default function App() {
                 } />
                 <Route path="/admin/stock" element={
                   <AdminRoute><AdminStockPage /></AdminRoute>
+                } />
+                <Route path="/admin/branches" element={
+                  <AdminRoute><AdminBranchesPage /></AdminRoute>
                 } />
                 <Route path="/admin/shipments" element={
                   <AdminRoute><AdminShipmentsPage /></AdminRoute>

@@ -55,6 +55,13 @@ router.delete('/categories/:id', controller.deleteCategory);
 
 router.get('/stock', controller.getStockDashboard);
 
+router.get('/branches', controller.getBranches);
+router.post('/branches', controller.createBranch);
+router.put('/branches/:id', controller.updateBranch);
+router.delete('/branches/:id', controller.deleteBranch);
+router.get('/branches/:id/stock', controller.getBranchStock);
+router.put('/branches/:id/stock', controller.setBranchStock);
+
 router.post('/upload', (req, res, next) => {
   upload.single('image')(req, res, (err) => {
     if (err) {

@@ -2,6 +2,7 @@ const pool = require('../db/connection');
 const ProductModel = require('../models/product.model');
 const ProductImageModel = require('../models/product-image.model');
 const CategoryModel = require('../models/category.model');
+const BranchModel = require('../models/branch.model');
 
 // --- Products ---
 
@@ -270,9 +271,124 @@ async function getStockDashboard(req, res, next) {
   }
 }
 
+// --- Branches (Sucursales) ---
+
+async function getBranches(req, res, next) {
+  try {
+    const branches = await BranchModel.findAll();
+    res.json({ branches });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function createBranch(req, res, next) {
+  try {
+    const { name, address, city, state, zip, country, phone } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Branch name is required' });
+    }
+    const id = await BranchModel.create({
+      name: name.trim(), address, city, state, zip, country, phone,
+    });
+    const branch = await BranchModel.findById(id);
+    res.status(201).json({ branch });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function updateBranch(req, res, next) {
+  try {
+    const { id } = req.params;
+    const existing = await BranchModel.findById(id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+    const { name, address, city, state, zip, country, phone, active } = req.body;
+    if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
+      return res.status(400).json({ error: 'Branch name cannot be empty' });
+    }
+    await BranchModel.update(id, {
+      name: name !== undefined ? name.trim() : existing.name,
+      address: address ?? existing.address,
+      city: city ?? existing.city,
+      state: state ?? existing.state,
+      zip: zip ?? existing.zip,
+      country: country ?? existing.country,
+      phone: phone ?? existing.phone,
+      active: active ?? existing.active,
+    });
+    const branch = await BranchModel.findById(id);
+    res.json({ branch });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteBranch(req, res, next) {
+  try {
+    const { id } = req.params;
+    const deleted = await BranchModel.delete(id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+    res.json({ message: 'Branch deleted' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getBranchStock(req, res, next) {
+  try {
+    const { id } = req.params;
+    const branch = await BranchModel.findById(id);
+    if (!branch) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+    const [stock, stats] = await Promise.all([
+      BranchModel.getStock(id),
+      BranchModel.getStockStats(id),
+    ]);
+    res.json({ branch, stock, stats });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function setBranchStock(req, res, next) {
+  try {
+    const { id } = req.params;
+    const branch = await BranchModel.findById(id);
+    if (!branch) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+    const { product_id, quantity } = req.body;
+    if (!Number.isInteger(product_id) || product_id <= 0) {
+      return res.status(400).json({ error: 'product_id must be a positive integer' });
+    }
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      return res.status(400).json({ error: 'quantity must be a non-negative integer' });
+    }
+    await BranchModel.setStock(id, product_id, quantity);
+    const [stock, stats] = await Promise.all([
+      BranchModel.getStock(id),
+      BranchModel.getStockStats(id),
+    ]);
+    res.json({ stock, stats });
+  } catch (err) {
+    if (err.code === '23503') {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    next(err);
+  }
+}
+
 module.exports = {
   getProducts, createProduct, updateProduct, deleteProduct,
   addProductImage, removeProductImage,
   getCategories, createCategory, updateCategory, deleteCategory,
   getStockDashboard,
+  getBranches, createBranch, updateBranch, deleteBranch,
+  getBranchStock, setBranchStock,
 };

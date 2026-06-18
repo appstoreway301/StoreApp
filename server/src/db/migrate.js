@@ -193,6 +193,33 @@ async function migrate() {
     );
   `);
 
+  // Sucursales autorizadas para vender productos
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS branches (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      address TEXT NOT NULL DEFAULT '',
+      city TEXT NOT NULL DEFAULT '',
+      state TEXT NOT NULL DEFAULT '',
+      zip TEXT NOT NULL DEFAULT '',
+      country TEXT NOT NULL DEFAULT 'MX',
+      phone TEXT NOT NULL DEFAULT '',
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  // Inventario de productos por sucursal
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS branch_stock (
+      id SERIAL PRIMARY KEY,
+      branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      quantity INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(branch_id, product_id)
+    );
+  `);
+
   console.log('Database migrations completed.');
 }
 

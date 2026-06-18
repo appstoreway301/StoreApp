@@ -1914,9 +1914,13 @@ a:hover { text-decoration: none; }
   font-size: 0.95rem;
   font-family: inherit;
   transition: border-color var(--transition);
+  background: var(--card-bg);
+  color: var(--text);
 }
+.form-group input::placeholder,
+.form-group textarea::placeholder { color: var(--text-light); }
 .form-group input:focus,
-.form-group textarea:focus { outline: none; border-color: var(--text); }
+.form-group textarea:focus { outline: none; border-color: var(--accent); }
 .admin-form-actions { display: flex; gap: 0.75rem; margin-top: 0.75rem; }
 .admin-table-wrap { overflow-x: auto; }
 .admin-table {
@@ -2009,8 +2013,11 @@ a:hover { text-decoration: none; }
   font-size: 0.95rem;
   font-family: inherit;
   transition: border-color var(--transition);
+  background: var(--card-bg);
+  color: var(--text);
 }
-.url-input:focus { outline: none; border-color: var(--text); }
+.url-input::placeholder { color: var(--text-light); }
+.url-input:focus { outline: none; border-color: var(--accent); }
 .image-preview { margin-top: 0.75rem; display: flex; align-items: flex-start; gap: 0.75rem; }
 .image-preview img {
   width: 120px;
@@ -2069,6 +2076,45 @@ a:hover { text-decoration: none; }
 .badge-out { background: #fef2f2; color: var(--danger); }
 .badge-low { background: #fffbeb; color: var(--warning); }
 .badge-ok { background: #ecfdf5; color: var(--success); }
+
+/* Accordion sections (admin) */
+.accordion-section { margin-bottom: 1rem; }
+.accordion-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.25rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.accordion-toggle:hover { border-color: var(--border-hover); }
+.accordion-toggle[aria-expanded="true"] {
+  border-color: var(--accent);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.accordion-chevron {
+  color: var(--accent);
+  transition: transform 0.2s ease;
+  font-size: 1.1rem;
+}
+.accordion-chevron.open { transform: rotate(180deg); }
+.accordion-body {
+  border: 1px solid var(--accent);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 1.25rem;
+}
+.accordion-body .admin-form-card { margin: 0; padding: 0; border: none; background: none; }
 
 
 /* ==================== 25. PROFILE & PROFILE SETTINGS ==================== */

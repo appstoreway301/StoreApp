@@ -12,6 +12,18 @@ const emptyForm = {
   category_ids: [],
 };
 
+function CollapsibleSection({ title, open, onToggle, children }) {
+  return (
+    <div className="accordion-section">
+      <button type="button" className="accordion-toggle" onClick={onToggle} aria-expanded={open}>
+        <span>{title}</span>
+        <span className={`accordion-chevron ${open ? 'open' : ''}`}>▾</span>
+      </button>
+      {open && <div className="accordion-body">{children}</div>}
+    </div>
+  );
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
@@ -24,6 +36,20 @@ export default function AdminProductsPage() {
   const [galleryProductId, setGalleryProductId] = useState(null);
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
+
+  // Category management (integrado en esta página)
+  const [catName, setCatName] = useState('');
+  const [editingCatId, setEditingCatId] = useState(null);
+  const [editCatName, setEditCatName] = useState('');
+
+  // Secciones desplegables (acordeón)
+  const [open, setOpen] = useState({
+    addProduct: true,
+    products: true,
+    addCategory: false,
+    categories: false,
+  });
+  const toggleSection = key => setOpen(prev => ({ ...prev, [key]: !prev[key] }));
 
   useEffect(() => {
     Promise.all([loadProducts(), loadCategories()]).finally(() => setLoading(false));
@@ -81,6 +107,7 @@ export default function AdminProductsPage() {
 
   function startEdit(product) {
     setEditingId(product.id);
+    setOpen(prev => ({ ...prev, addProduct: true }));
     setForm({
       name: product.name,
       description: product.description || '',
@@ -222,6 +249,51 @@ export default function AdminProductsPage() {
     }
   }
 
+  // --- Categories ---
+  async function handleCreateCategory(e) {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!catName.trim()) return;
+    try {
+      await api.post('/admin/categories', { name: catName.trim() });
+      setCatName('');
+      setSuccess('Category created');
+      loadCategories();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create category');
+    }
+  }
+
+  async function handleUpdateCategory(id) {
+    setError('');
+    setSuccess('');
+    if (!editCatName.trim()) return;
+    try {
+      await api.put(`/admin/categories/${id}`, { name: editCatName.trim() });
+      setEditingCatId(null);
+      setEditCatName('');
+      setSuccess('Category updated');
+      loadCategories();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update category');
+    }
+  }
+
+  async function handleDeleteCategory(id) {
+    if (!confirm('Delete this category? It will be unlinked from all products.')) return;
+    setError('');
+    setSuccess('');
+    try {
+      await api.delete(`/admin/categories/${id}`);
+      setSuccess('Category deleted');
+      loadCategories();
+      loadProducts();
+    } catch {
+      setError('Failed to delete category');
+    }
+  }
+
   if (loading) return <div className="loading">Loading...</div>;
 
   const galleryProduct = products.find(p => p.id === galleryProductId);
@@ -263,8 +335,12 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      <div className="admin-form-card">
-        <h2>{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+      <CollapsibleSection
+        title={editingId ? 'Edit Product' : 'Add New Product'}
+        open={open.addProduct}
+        onToggle={() => toggleSection('addProduct')}
+      >
+        <div className="admin-form-card">
         <form onSubmit={handleSubmit} className="admin-form">
           {!galleryProduct && error && <div className="alert alert-error">{error}</div>}
           {!galleryProduct && success && <div className="alert alert-success">{success}</div>}
@@ -332,9 +408,14 @@ export default function AdminProductsPage() {
             {editingId && <button type="button" className="btn" onClick={cancelEdit}>Cancel</button>}
           </div>
         </form>
-      </div>
+        </div>
+      </CollapsibleSection>
 
-      <h2>Products ({products.length})</h2>
+      <CollapsibleSection
+        title={`Products (${products.length})`}
+        open={open.products}
+        onToggle={() => toggleSection('products')}
+      >
       <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
@@ -389,6 +470,61 @@ export default function AdminProductsPage() {
           </tbody>
         </table>
       </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title="Add New Category"
+        open={open.addCategory}
+        onToggle={() => toggleSection('addCategory')}
+      >
+        <div className="admin-form-card">
+          <form onSubmit={handleCreateCategory} className="admin-form">
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <input
+                value={catName}
+                onChange={e => setCatName(e.target.value)}
+                placeholder="Category name..."
+                required
+                style={{ flex: 1, padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '1rem', background: 'var(--card-bg)', color: 'var(--text)' }}
+              />
+              <button type="submit" className="btn btn-primary">Add</button>
+            </div>
+          </form>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title={`Categories (${allCategories.length})`}
+        open={open.categories}
+        onToggle={() => toggleSection('categories')}
+      >
+        <div className="categories-list">
+          {allCategories.map(cat => (
+            <div key={cat.id} className="category-row">
+              {editingCatId === cat.id ? (
+                <>
+                  <input
+                    value={editCatName}
+                    onChange={e => setEditCatName(e.target.value)}
+                    className="category-edit-input"
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && handleUpdateCategory(cat.id)}
+                  />
+                  <button className="btn btn-sm btn-primary" onClick={() => handleUpdateCategory(cat.id)}>Save</button>
+                  <button className="btn btn-sm" onClick={() => setEditingCatId(null)}>Cancel</button>
+                </>
+              ) : (
+                <>
+                  <span className="category-name">{cat.name}</span>
+                  <button className="btn btn-sm" onClick={() => { setEditingCatId(cat.id); setEditCatName(cat.name); }}>Edit</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => handleDeleteCategory(cat.id)}>Delete</button>
+                </>
+              )}
+            </div>
+          ))}
+          {allCategories.length === 0 && <p style={{ color: 'var(--text-light)' }}>No categories yet.</p>}
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
