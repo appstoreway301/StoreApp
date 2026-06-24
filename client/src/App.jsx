@@ -4,6 +4,10 @@ import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
+import AdminLayout from './components/AdminLayout';
+
+// Pages públicas
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ProductsPage from './pages/ProductsPage';
@@ -16,14 +20,14 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 import CheckoutCancelPage from './pages/CheckoutCancelPage';
 import CompleteRegistrationPage from './pages/CompleteRegistrationPage';
 import OrdersPage from './pages/OrdersPage';
-import AdminPage from './pages/AdminPage';
-import AdminProductsPage from './pages/AdminProductsPage';
-import AdminCategoriesPage from './pages/AdminCategoriesPage';
-import AdminStockPage from './pages/AdminStockPage';
-import AdminShipmentsPage from './pages/AdminShipmentsPage';
-import AdminBranchesPage from './pages/AdminBranchesPage';
 import ProfilePage from './pages/ProfilePage';
-import AdminRoute from './components/AdminRoute';
+
+// Admin Pages
+import Dashboard from './pages/admin/Dashboard';
+import Products from './pages/admin/Products';
+import Branches from './pages/admin/Branches';
+import Shipments from './pages/admin/Shipments';
+import Stock from './pages/admin/Stock';
 
 export default function App() {
   return (
@@ -31,49 +35,39 @@ export default function App() {
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/products" element={<ProductsPage />} />
-                <Route path="/product/:id" element={<ProductDetailPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/verify-email" element={<VerifyEmailPage />} />
-                <Route path="/complete-registration" element={<CompleteRegistrationPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route path="/checkout/success" element={
-                  <ProtectedRoute><CheckoutSuccessPage /></ProtectedRoute>
-                } />
-                <Route path="/checkout/cancel" element={
-                  <ProtectedRoute><CheckoutCancelPage /></ProtectedRoute>
-                } />
-                <Route path="/profile" element={
-                  <ProtectedRoute><ProfilePage /></ProtectedRoute>
-                } />
-                <Route path="/orders" element={
-                  <ProtectedRoute><OrdersPage /></ProtectedRoute>
-                } />
-                <Route path="/admin" element={
-                  <AdminRoute><AdminPage /></AdminRoute>
-                } />
-                <Route path="/admin/products" element={
-                  <AdminRoute><AdminProductsPage /></AdminRoute>
-                } />
-                <Route path="/admin/categories" element={
-                  <AdminRoute><AdminCategoriesPage /></AdminRoute>
-                } />
-                <Route path="/admin/stock" element={
-                  <AdminRoute><AdminStockPage /></AdminRoute>
-                } />
-                <Route path="/admin/branches" element={
-                  <AdminRoute><AdminBranchesPage /></AdminRoute>
-                } />
-                <Route path="/admin/shipments" element={
-                  <AdminRoute><AdminShipmentsPage /></AdminRoute>
-                } />
-              </Routes>
-            </Layout>
+            <Routes>
+              {/* ===== RUTAS PÚBLICAS (con Layout) ===== */}
+              <Route path="/" element={<Layout><HomePage /></Layout>} />
+              <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+              <Route path="/products" element={<Layout><ProductsPage /></Layout>} />
+              <Route path="/product/:id" element={<Layout><ProductDetailPage /></Layout>} />
+              <Route path="/login" element={<Layout><LoginPage /></Layout>} />
+              <Route path="/register" element={<Layout><RegisterPage /></Layout>} />
+              <Route path="/verify-email" element={<Layout><VerifyEmailPage /></Layout>} />
+              <Route path="/complete-registration" element={<Layout><CompleteRegistrationPage /></Layout>} />
+              <Route path="/cart" element={<Layout><CartPage /></Layout>} />
+              <Route path="/checkout/success" element={
+                <Layout><ProtectedRoute><CheckoutSuccessPage /></ProtectedRoute></Layout>
+              } />
+              <Route path="/checkout/cancel" element={
+                <Layout><ProtectedRoute><CheckoutCancelPage /></ProtectedRoute></Layout>
+              } />
+              <Route path="/profile" element={
+                <Layout><ProtectedRoute><ProfilePage /></ProtectedRoute></Layout>
+              } />
+              <Route path="/orders" element={
+                <Layout><ProtectedRoute><OrdersPage /></ProtectedRoute></Layout>
+              } />
+
+              {/* ===== RUTAS DEL ADMIN (SIN Layout, SOLO AdminLayout) ===== */}
+              <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                <Route index element={<Dashboard />} />
+                <Route path="products" element={<Products />} />
+                <Route path="branches" element={<Branches />} />
+                <Route path="shipments" element={<Shipments />} />
+                <Route path="stock" element={<Stock />} />
+              </Route>
+            </Routes>
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>

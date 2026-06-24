@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
+import { Plus, Pencil, Trash2, Image, X, ChevronDown, ChevronUp } from 'lucide-react';
+import api from '../../api/client';
 
 const emptyForm = {
   name: '',
@@ -12,19 +13,7 @@ const emptyForm = {
   category_ids: [],
 };
 
-function CollapsibleSection({ title, open, onToggle, children }) {
-  return (
-    <div className="accordion-section">
-      <button type="button" className="accordion-toggle" onClick={onToggle} aria-expanded={open}>
-        <span>{title}</span>
-        <span className={`accordion-chevron ${open ? 'open' : ''}`}>▾</span>
-      </button>
-      {open && <div className="accordion-body">{children}</div>}
-    </div>
-  );
-}
-
-export default function AdminProductsPage() {
+export default function Products() {
   const [products, setProducts] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -37,12 +26,12 @@ export default function AdminProductsPage() {
   const [galleryImages, setGalleryImages] = useState([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
 
-  // Category management (integrado en esta página)
+  // Categorías
   const [catName, setCatName] = useState('');
   const [editingCatId, setEditingCatId] = useState(null);
   const [editCatName, setEditCatName] = useState('');
 
-  // Secciones desplegables (acordeón)
+  // Secciones desplegables
   const [open, setOpen] = useState({
     addProduct: true,
     products: true,
@@ -249,7 +238,7 @@ export default function AdminProductsPage() {
     }
   }
 
-  // --- Categories ---
+  // Categories
   async function handleCreateCategory(e) {
     e.preventDefault();
     setError('');
@@ -301,8 +290,10 @@ export default function AdminProductsPage() {
   return (
     <div className="admin-page">
       <div className="admin-header">
-        <Link to="/admin" className="btn-back-circle">&larr; Back</Link>
         <h1>Product Management</h1>
+        <button className="btn btn-primary" onClick={() => setOpen(prev => ({ ...prev, addProduct: true }))}>
+          <Plus size={16} /> Add Product
+        </button>
       </div>
 
       {/* Gallery Modal */}
@@ -335,149 +326,145 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      <CollapsibleSection
-        title={editingId ? 'Edit Product' : 'Add New Product'}
-        open={open.addProduct}
-        onToggle={() => toggleSection('addProduct')}
-      >
+      {/* Add/Edit Product Form */}
+      {open.addProduct && (
         <div className="admin-form-card">
-        <form onSubmit={handleSubmit} className="admin-form">
-          {!galleryProduct && error && <div className="alert alert-error">{error}</div>}
-          {!galleryProduct && success && <div className="alert alert-success">{success}</div>}
+          <h2>{editingId ? 'Edit Product' : 'Add New Product'}</h2>
+          <form onSubmit={handleSubmit} className="admin-form">
+            {!galleryProduct && error && <div className="alert alert-error">{error}</div>}
+            {!galleryProduct && success && <div className="alert alert-success">{success}</div>}
 
-          <div className="admin-form-grid">
-            <div className="form-group">
-              <label>Name</label>
-              <input name="name" value={form.name} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Price ($)</label>
-              <input name="price" type="number" step="0.01" min="0.01" value={form.price} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Stock</label>
-              <input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Weight (kg)</label>
-              <input name="weight_kg" type="number" step="0.01" min="0.01" value={form.weight_kg} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Categories</label>
-              <div className="tags-selector">
-                {allCategories.length === 0 && <span className="tags-empty">No categories. Create some in Category Management.</span>}
-                {allCategories.map(cat => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    className={`tag ${form.category_ids.includes(cat.id) ? 'tag-selected' : ''}`}
-                    onClick={() => toggleCategory(cat.id)}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
+            <div className="admin-form-grid">
+              <div className="form-group">
+                <label>Name</label>
+                <input name="name" value={form.name} onChange={handleChange} required />
               </div>
-            </div>
-            <div className="form-group full-width">
-              <label>Main Image</label>
-              <div className="image-upload-area">
-                <input type="file" accept="image/*" onChange={handleImageUpload} className="file-input" id="image-upload" />
-                <label htmlFor="image-upload" className="btn file-label">
-                  {uploading ? 'Uploading...' : 'Choose Image'}
-                </label>
-                <span className="image-or">or</span>
-                <input name="image_url" value={form.image_url} onChange={handleChange} placeholder="Paste image URL..." className="url-input" />
+              <div className="form-group">
+                <label>Price ($)</label>
+                <input name="price" type="number" step="0.01" min="0.01" value={form.price} onChange={handleChange} required />
               </div>
-              {form.image_url && (
-                <div className="image-preview">
-                  <img src={form.image_url} alt="Preview" />
-                  <button type="button" className="btn btn-sm btn-danger" onClick={() => setForm(prev => ({ ...prev, image_url: '' }))}>Remove</button>
+              <div className="form-group">
+                <label>Stock</label>
+                <input name="stock" type="number" min="0" value={form.stock} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label>Weight (kg)</label>
+                <input name="weight_kg" type="number" step="0.01" min="0.01" value={form.weight_kg} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label>Categories</label>
+                <div className="tags-selector">
+                  {allCategories.length === 0 && <span className="tags-empty">No categories. Create some in Category Management.</span>}
+                  {allCategories.map(cat => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      className={`tag ${form.category_ids.includes(cat.id) ? 'tag-selected' : ''}`}
+                      onClick={() => toggleCategory(cat.id)}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
-            <div className="form-group full-width">
-              <label>Description</label>
-              <textarea name="description" value={form.description} onChange={handleChange} rows="3" />
-            </div>
-          </div>
-
-          <div className="admin-form-actions">
-            <button type="submit" className="btn btn-primary" disabled={uploading}>
-              {editingId ? 'Save Changes' : 'Add Product'}
-            </button>
-            {editingId && <button type="button" className="btn" onClick={cancelEdit}>Cancel</button>}
-          </div>
-        </form>
-        </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={`Products (${products.length})`}
-        open={open.products}
-        onToggle={() => toggleSection('products')}
-      >
-      <div className="admin-table-wrap">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Name</th>
-              <th>Categories</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Gallery</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(p => (
-              <tr key={p.id} className={!p.active ? 'inactive-row' : ''}>
-                <td>
-                  <img src={p.image_url || 'https://placehold.co/50x50?text=No+Img'} alt={p.name} className="admin-product-img" />
-                </td>
-                <td><strong>{p.name}</strong></td>
-                <td>
-                  <div className="tags-display">
-                    {(p.categories || []).map(c => (
-                      <span key={c.id} className="tag tag-small">{c.name}</span>
-                    ))}
-                    {(!p.categories || p.categories.length === 0) && <span style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>—</span>}
+              </div>
+              <div className="form-group full-width">
+                <label>Main Image</label>
+                <div className="image-upload-area">
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="file-input" id="image-upload" />
+                  <label htmlFor="image-upload" className="btn file-label">
+                    {uploading ? 'Uploading...' : 'Choose Image'}
+                  </label>
+                  <span className="image-or">or</span>
+                  <input name="image_url" value={form.image_url} onChange={handleChange} placeholder="Paste image URL..." className="url-input" />
+                </div>
+                {form.image_url && (
+                  <div className="image-preview">
+                    <img src={form.image_url} alt="Preview" />
+                    <button type="button" className="btn btn-sm btn-danger" onClick={() => setForm(prev => ({ ...prev, image_url: '' }))}>Remove</button>
                   </div>
-                </td>
-                <td>${(p.price_cents / 100).toFixed(2)}</td>
-                <td>{p.stock}</td>
-                <td>
-                  <button className="btn btn-sm" onClick={() => openGallery(p)}>
-                    {(p.images?.length || 0)} imgs
-                  </button>
-                </td>
-                <td>
-                  <span className={`status-badge ${p.active ? 'badge-active' : 'badge-inactive'}`}>
-                    {p.active ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="admin-actions">
-                  <button className="btn btn-sm" onClick={() => startEdit(p)}>Edit</button>
-                  {p.active ? (
-                    <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>Remove</button>
-                  ) : (
-                    <button className="btn btn-sm btn-success" onClick={() => handleReactivate(p.id)}>Reactivate</button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      </CollapsibleSection>
+                )}
+              </div>
+              <div className="form-group full-width">
+                <label>Description</label>
+                <textarea name="description" value={form.description} onChange={handleChange} rows="3" />
+              </div>
+            </div>
 
-      <CollapsibleSection
-        title="Add New Category"
-        open={open.addCategory}
-        onToggle={() => toggleSection('addCategory')}
-      >
-        <div className="admin-form-card">
+            <div className="admin-form-actions">
+              <button type="submit" className="btn btn-primary" disabled={uploading}>
+                {editingId ? 'Save Changes' : 'Add Product'}
+              </button>
+              {editingId && <button type="button" className="btn" onClick={cancelEdit}>Cancel</button>}
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Products List */}
+      {open.products && (
+        <div>
+          <h2>Products ({products.length})</h2>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Image</th>
+                  <th>Name</th>
+                  <th>Categories</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Gallery</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map(p => (
+                  <tr key={p.id} className={!p.active ? 'inactive-row' : ''}>
+                    <td>
+                      <img src={p.image_url || 'https://placehold.co/50x50?text=No+Img'} alt={p.name} className="admin-product-img" />
+                    </td>
+                    <td><strong>{p.name}</strong></td>
+                    <td>
+                      <div className="tags-display">
+                        {(p.categories || []).map(c => (
+                          <span key={c.id} className="tag tag-small">{c.name}</span>
+                        ))}
+                        {(!p.categories || p.categories.length === 0) && <span style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>—</span>}
+                      </div>
+                    </td>
+                    <td>${(p.price_cents / 100).toFixed(2)}</td>
+                    <td>{p.stock}</td>
+                    <td>
+                      <button className="btn btn-sm" onClick={() => openGallery(p)}>
+                        {(p.images?.length || 0)} imgs
+                      </button>
+                    </td>
+                    <td>
+                      <span className={`status-badge ${p.active ? 'badge-active' : 'badge-inactive'}`}>
+                        {p.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="admin-actions">
+                      <button className="btn btn-sm" onClick={() => startEdit(p)}>Edit</button>
+                      {p.active ? (
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(p.id)}>Remove</button>
+                      ) : (
+                        <button className="btn btn-sm btn-success" onClick={() => handleReactivate(p.id)}>Reactivate</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Categories Section */}
+      <div className="admin-categories-section">
+        <h3>Categories</h3>
+        <div className="admin-categories-add">
           <form onSubmit={handleCreateCategory} className="admin-form">
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <input
@@ -491,13 +478,6 @@ export default function AdminProductsPage() {
             </div>
           </form>
         </div>
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={`Categories (${allCategories.length})`}
-        open={open.categories}
-        onToggle={() => toggleSection('categories')}
-      >
         <div className="categories-list">
           {allCategories.map(cat => (
             <div key={cat.id} className="category-row">
@@ -524,7 +504,7 @@ export default function AdminProductsPage() {
           ))}
           {allCategories.length === 0 && <p style={{ color: 'var(--text-light)' }}>No categories yet.</p>}
         </div>
-      </CollapsibleSection>
+      </div>
     </div>
   );
 }

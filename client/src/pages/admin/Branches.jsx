@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
+import { Plus, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import api from '../../api/client';
 
 const EMPTY_FORM = {
   name: '', address: '', city: '', state: '', zip: '', country: 'MX', phone: '',
@@ -65,7 +66,7 @@ function StockRow({ item, onSave }) {
   );
 }
 
-export default function AdminBranchesPage() {
+export default function Branches() {
   const [branches, setBranches] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
@@ -77,7 +78,7 @@ export default function AdminBranchesPage() {
   const [stock, setStock] = useState([]);
   const [stockStats, setStockStats] = useState(null);
 
-  // Secciones desplegables (acordeón)
+  // Secciones desplegables
   const [open, setOpen] = useState({ addBranch: true, branches: true });
   const toggleSection = key => setOpen(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -191,8 +192,10 @@ export default function AdminBranchesPage() {
   return (
     <div className="admin-page">
       <div className="admin-header">
-        <Link to="/admin" className="btn-back-circle">&larr; Back</Link>
         <h1>Branch Management</h1>
+        <button className="btn btn-primary" onClick={() => setOpen(prev => ({ ...prev, addBranch: true }))}>
+          <Plus size={16} /> Add Branch
+        </button>
       </div>
 
       <CollapsibleSection

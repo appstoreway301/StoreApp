@@ -67,7 +67,7 @@ export default function Footer() {
             <ul>
               <li><a href="https://www.instagram.com/kongmontoya_store/" target="_blank" rel="noopener noreferrer">Instagram</a></li>
               <li><a href="https://www.tiktok.com/@kongmontoya_store444/" target="_blank" rel="noopener noreferrer">TikTok</a></li>
-              <li><a href="#" target="_blank" rel="noopener noreferrer">Twitter / X</a></li>
+              <li><a href="https://www.facebook.com/profile.php?id=61588394711104" target="_blank" rel="noopener noreferrer">Facebook</a></li>
             </ul>
           </div>
         </div>
