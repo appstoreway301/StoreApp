@@ -1,6 +1,9 @@
 const pool = require('./connection');
 
 async function migrate() {
+  // ============================================================
+  // TABLAS EXISTENTES (NO MODIFICADAS)
+  // ============================================================
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -25,6 +28,7 @@ async function migrate() {
       category TEXT,
       stock INTEGER NOT NULL DEFAULT 0,
       active BOOLEAN NOT NULL DEFAULT TRUE,
+      featured BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMP NOT NULL DEFAULT NOW()
     );
 
@@ -91,7 +95,10 @@ async function migrate() {
     );
   `);
 
-  // Migración: agregar columna processed a orders si no existe
+  // ============================================================
+  // MIGRACIONES EXISTENTES (NO MODIFICADAS)
+  // ============================================================
+
   await pool.query(`
     DO $$
     BEGIN
@@ -104,7 +111,6 @@ async function migrate() {
     END $$;
   `);
 
-  // Migración: columnas de shipping en orders para Envia
   await pool.query(`
     DO $$
     BEGIN
@@ -119,7 +125,6 @@ async function migrate() {
     END $$;
   `);
 
-  // Migración: columna weight_kg en products
   await pool.query(`
     DO $$
     BEGIN
@@ -132,7 +137,111 @@ async function migrate() {
     END $$;
   `);
 
-  // Tabla de direcciones de envío del usuario (máx 3)
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'products' AND column_name = 'featured'
+      ) THEN
+        ALTER TABLE products ADD COLUMN featured BOOLEAN NOT NULL DEFAULT FALSE;
+      END IF;
+    END $$;
+  `);
+
+  // ============================================================
+  // NUEVAS TABLAS - TALLAS Y COLORES GLOBALES
+  // ============================================================
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sizes (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS colors (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      hex_code TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_sizes (
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      size_id INTEGER NOT NULL REFERENCES sizes(id) ON DELETE CASCADE,
+      PRIMARY KEY (product_id, size_id)
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_colors (
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      color_id INTEGER NOT NULL REFERENCES colors(id) ON DELETE CASCADE,
+      PRIMARY KEY (product_id, color_id)
+    );
+  `);
+
+  // ============================================================
+  // NUEVAS MIGRACIONES - SISTEMA DE VARIANTES (TALLA + COLOR)
+  // ============================================================
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_variants (
+      id SERIAL PRIMARY KEY,
+      product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+      size TEXT NOT NULL,
+      color TEXT NOT NULL,
+      sku TEXT UNIQUE,
+      stock INTEGER NOT NULL DEFAULT 0,
+      image_url TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON product_variants(product_id);
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'cart_items' AND column_name = 'variant_id'
+      ) THEN
+        ALTER TABLE cart_items ADD COLUMN variant_id INTEGER REFERENCES product_variants(id) ON DELETE CASCADE;
+      END IF;
+    END $$;
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name = 'cart_items'
+          AND constraint_name = 'cart_items_user_id_product_id_key'
+          AND constraint_type = 'UNIQUE'
+      ) THEN
+        ALTER TABLE cart_items DROP CONSTRAINT cart_items_user_id_product_id_key;
+        ALTER TABLE cart_items ADD CONSTRAINT cart_items_user_id_product_id_variant_id_key
+          UNIQUE (user_id, product_id, variant_id);
+      END IF;
+    END $$;
+  `);
+
+  // ============================================================
+  // TABLAS EXISTENTES ADICIONALES (NO MODIFICADAS)
+  // ============================================================
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS user_addresses (
       id SERIAL PRIMARY KEY,
@@ -150,7 +259,6 @@ async function migrate() {
     );
   `);
 
-  // Migrar datos de shipping de users a user_addresses si existen
   await pool.query(`
     DO $$
     BEGIN
@@ -175,7 +283,6 @@ async function migrate() {
     END $$;
   `);
 
-  // Tabla de shipments para tracking de Envia
   await pool.query(`
     CREATE TABLE IF NOT EXISTS shipments (
       id SERIAL PRIMARY KEY,
@@ -193,7 +300,6 @@ async function migrate() {
     );
   `);
 
-  // Sucursales autorizadas para vender productos
   await pool.query(`
     CREATE TABLE IF NOT EXISTS branches (
       id SERIAL PRIMARY KEY,
@@ -209,7 +315,6 @@ async function migrate() {
     );
   `);
 
-  // Inventario de productos por sucursal
   await pool.query(`
     CREATE TABLE IF NOT EXISTS branch_stock (
       id SERIAL PRIMARY KEY,
@@ -220,7 +325,7 @@ async function migrate() {
     );
   `);
 
-  console.log('Database migrations completed.');
+  console.log('✅ Database migrations completed.');
 }
 
 module.exports = migrate;

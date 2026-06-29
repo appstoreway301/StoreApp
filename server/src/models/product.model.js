@@ -41,18 +41,26 @@ const ProductModel = {
     return rows;
   },
 
-  async create({ name, description, priceCents, imageUrl, category, stock, weightKg }) {
+  async findFeatured(limit = 8) {
     const { rows } = await pool.query(
-      'INSERT INTO products (name, description, price_cents, image_url, category, stock, weight_kg) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [name, description, priceCents, imageUrl, category, stock, weightKg || 1.0]
+      'SELECT * FROM products WHERE active = TRUE AND featured = TRUE ORDER BY created_at DESC LIMIT $1',
+      [limit]
+    );
+    return rows;
+  },
+
+  async create({ name, description, priceCents, imageUrl, category, stock, weightKg, featured }) {
+    const { rows } = await pool.query(
+      'INSERT INTO products (name, description, price_cents, image_url, category, stock, weight_kg, featured) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [name, description, priceCents, imageUrl, category, stock, weightKg || 1.0, featured || false]
     );
     return rows[0].id;
   },
 
-  async update(id, { name, description, priceCents, imageUrl, category, stock, active, weightKg }) {
+  async update(id, { name, description, priceCents, imageUrl, category, stock, active, weightKg, featured }) {
     const { rowCount } = await pool.query(
-      'UPDATE products SET name = $1, description = $2, price_cents = $3, image_url = $4, category = $5, stock = $6, active = $7, weight_kg = $8 WHERE id = $9',
-      [name, description, priceCents, imageUrl, category, stock, active, weightKg, id]
+      'UPDATE products SET name = $1, description = $2, price_cents = $3, image_url = $4, category = $5, stock = $6, active = $7, weight_kg = $8, featured = $9 WHERE id = $10',
+      [name, description, priceCents, imageUrl, category, stock, active, weightKg, featured, id]
     );
     return rowCount > 0;
   },

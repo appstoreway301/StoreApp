@@ -1,3 +1,4 @@
+// client/src/pages/CartPage.jsx
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -5,6 +6,10 @@ import CartItem from '../components/CartItem';
 import ShippingQuotes from '../components/ShippingQuotes';
 import api from '../api/client';
 import { useState, useEffect } from 'react';
+import { 
+  ShoppingBag, Trash2, ArrowRight, Shield, Truck, 
+  CreditCard, MapPin, ChevronRight, Package, X 
+} from 'lucide-react';
 
 const emptyShipping = {
   name: '',
@@ -17,18 +22,18 @@ const emptyShipping = {
 };
 
 const COUNTRIES = [
-  { code: 'MX', name: 'Mexico' },
-  { code: 'US', name: 'United States' },
+  { code: 'MX', name: 'México' },
+  { code: 'US', name: 'Estados Unidos' },
   { code: 'CO', name: 'Colombia' },
   { code: 'AR', name: 'Argentina' },
-  { code: 'ES', name: 'Spain' },
+  { code: 'ES', name: 'España' },
   { code: 'CL', name: 'Chile' },
-  { code: 'PE', name: 'Peru' },
-  { code: 'BR', name: 'Brazil' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'DE', name: 'Germany' },
-  { code: 'FR', name: 'France' },
+  { code: 'PE', name: 'Perú' },
+  { code: 'BR', name: 'Brasil' },
+  { code: 'CA', name: 'Canadá' },
+  { code: 'GB', name: 'Reino Unido' },
+  { code: 'DE', name: 'Alemania' },
+  { code: 'FR', name: 'Francia' },
 ];
 
 export default function CartPage() {
@@ -43,6 +48,7 @@ export default function CartPage() {
   const [zipLoading, setZipLoading] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [shipping, setShipping] = useState(emptyShipping);
+  const [step, setStep] = useState(1); // 1: Cart, 2: Shipping, 3: Payment
 
   // Cargar direcciones guardadas del usuario
   useEffect(() => {
@@ -97,7 +103,7 @@ export default function CartPage() {
         }
       }
     } catch {
-      // silently fail, user can fill manually
+      // silently fail
     } finally {
       setZipLoading(false);
     }
@@ -122,6 +128,7 @@ export default function CartPage() {
       country: addr.country,
       phone: addr.phone || '',
     });
+    setSelectedQuote(null);
   }
 
   function handleProceed() {
@@ -129,7 +136,7 @@ export default function CartPage() {
       navigate('/login?redirect=/cart');
       return;
     }
-    setShowShipping(true);
+    setStep(2);
     setError('');
     if (savedAddresses.length > 0) {
       setShowQuotes(true);
@@ -141,24 +148,33 @@ export default function CartPage() {
     setError('');
 
     if (!shipping.name || !shipping.address || !shipping.city || !shipping.state || !shipping.zip || !shipping.country) {
-      setError('Please fill in all required address fields');
+      setError('Completa todos los campos de la dirección');
       return;
     }
 
     setShowQuotes(true);
+    setStep(3);
     setSelectedQuote(null);
   }
 
   function handleBackToAddress() {
     setShowQuotes(false);
+    setStep(2);
     setSelectedQuote(null);
+  }
+
+  function handleBackToCart() {
+    setShowQuotes(false);
+    setStep(1);
+    setSelectedQuote(null);
+    setShowShipping(false);
   }
 
   async function handleCheckout() {
     setError('');
 
     if (!selectedQuote) {
-      setError('Please select a shipping method');
+      setError('Selecciona un método de envío');
       return;
     }
 
@@ -176,7 +192,7 @@ export default function CartPage() {
       window.location.href = data.url;
     } catch (err) {
       const errorData = err.response?.data;
-      setError(errorData?.error || 'Could not start checkout');
+      setError(errorData?.error || 'Error al iniciar el pago');
       if (errorData?.carrierError) {
         setSelectedQuote(null);
       }
@@ -187,27 +203,25 @@ export default function CartPage() {
   // ==================== CARRITO VACÍO ====================
   if (items.length === 0) {
     return (
-      <div className="cart-empty">
-        <div className="cart-empty-content">
-          <div className="cart-empty-svg">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 4H5L6.8 12.5C7 13.3 7.7 13.8 8.5 13.8H17C17.8 13.8 18.5 13.3 18.7 12.5L20 7H6" 
-                    stroke="var(--accent)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M6 7H20" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round"/>
-              <circle cx="9" cy="19" r="1.8" fill="var(--accent)"/>
-              <circle cx="17" cy="19" r="1.8" fill="var(--accent)"/>
-            </svg>
+      <div className="pt-20 pb-20 min-h-screen bg-[var(--bg)] flex items-center justify-center">
+        <div className="max-w-md w-full mx-4 text-center">
+          <div className="mb-6">
+            <div className="w-24 h-24 mx-auto rounded-full bg-[var(--card-bg)] border border-[var(--border)] flex items-center justify-center">
+              <ShoppingBag size={40} className="text-[var(--text-light)]" />
+            </div>
           </div>
-          <h1>TU CARRITO ESTÁ VACÍO</h1>
-          <p className="cart-empty-message">
-            No dejes que tu actitud se quede sin outfit.<br />
-            Descubre nuestra colección y encuentra tu estilo.
+          <h1 className="text-2xl font-black uppercase tracking-tight text-[var(--text)]">
+            Tu carrito está vacío
+          </h1>
+          <p className="text-[var(--text-secondary)] text-sm mt-2 max-w-xs mx-auto">
+            No dejes que tu actitud se quede sin outfit. Descubre nuestra colección.
           </p>
           <button 
-            className="btn btn-primary cart-empty-btn"
-            onClick={() => navigate('/#products')}
+            className="mt-6 px-8 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(232,93,4,0.3)]"
+            onClick={() => navigate('/products')}
           >
-            EXPLORAR PRODUCTOS →
+            Explorar Productos
+            <ArrowRight size={16} className="inline ml-2" />
           </button>
         </div>
       </div>
@@ -217,204 +231,358 @@ export default function CartPage() {
   const grandTotal = cartTotal + (selectedQuote?.priceCents || 0);
 
   return (
-    <div className="cart-page">
-      <h1 className="cart-page-title">TU CARRITO</h1>
-      
-      {error && <div className="alert alert-error">{error}</div>}
-
-      {/* Cabecera del carrito (solo desktop) */}
-      <div className="cart-header">
-        <span>Producto</span>
-        <span>Cantidad</span>
-        <span>Precio</span>
-        <span></span>
-      </div>
-
-      <div className="cart-items">
-        {items.map(item => (
-          <CartItem key={item.id} item={item} />
-        ))}
-      </div>
-
-      <div className="cart-summary">
-        {/* Frase motivacional */}
-        <div className="cart-motivation">
-          <p>💪 Cada prenda es una extensión de tu actitud. Completa tu compra.</p>
+    <div className="pt-20 pb-20 min-h-screen bg-[var(--bg)]">
+      <div className="max-w-6xl mx-auto px-4 md:px-6">
+        {/* ===== HEADER ===== */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-1 h-8 bg-[var(--accent)] rounded-full" />
+          <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-[var(--text)]">
+            Tu Carrito
+          </h1>
+          <span className="ml-auto text-sm text-[var(--text-light)] bg-[var(--card-bg)] px-4 py-1.5 rounded-full border border-[var(--border)]">
+            {items.length} {items.length === 1 ? 'producto' : 'productos'}
+          </span>
         </div>
 
-        <div className="cart-summary-inner">
-          <div className="cart-summary-row">
-            <span>Subtotal:</span>
-            <strong>{formatPrice(cartTotal)}</strong>
-          </div>
-
-          {selectedQuote && (
-            <div className="cart-summary-row">
-              <span>Envío ({selectedQuote.carrier}):</span>
-              <span>{formatPrice(selectedQuote.priceCents)}</span>
-            </div>
-          )}
-
-          {!showShipping && !selectedQuote && (
-            <div className="cart-summary-row cart-summary-shipping">
-              <span>Envío:</span>
-              <span>Calculado después</span>
-            </div>
-          )}
-
-          <div className="cart-summary-total">
-            <span>Total:</span>
-            <strong>{formatPrice(selectedQuote ? grandTotal : cartTotal)}</strong>
-          </div>
-
-          {/* Step 1: Proceed to checkout */}
-          {!showShipping ? (
-            <div className="cart-actions">
-              <button className="btn btn-outline" onClick={clearCart}>
-                Vaciar carrito
-              </button>
-              <button className="btn btn-primary" onClick={handleProceed}>
-                Proceder al pago →
-              </button>
-            </div>
-          ) : !showQuotes ? (
-            /* Step 2: Shipping address form */
-            <form onSubmit={handleGetQuotes} className="shipping-form">
-              <h3>Dirección de envío</h3>
-              <div className="shipping-grid">
-                <div className="form-group">
-                  <label>Nombre completo *</label>
-                  <input name="name" value={shipping.name} onChange={handleShippingChange} required />
+        {/* ===== STEPS INDICATOR ===== */}
+        <div className="flex items-center gap-2 mb-8 px-4 py-3 bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl">
+          {[
+            { num: 1, label: 'Carrito', icon: ShoppingBag },
+            { num: 2, label: 'Envío', icon: MapPin },
+            { num: 3, label: 'Pago', icon: CreditCard },
+          ].map((s, idx) => (
+            <div key={s.num} className="flex items-center flex-1">
+              <div className={`flex items-center gap-2 ${step >= s.num ? 'text-[var(--accent)]' : 'text-[var(--text-light)]'}`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                  step >= s.num 
+                    ? 'bg-[var(--accent)] text-white shadow-[0_4px_12px_rgba(232,93,4,0.3)]' 
+                    : 'bg-[var(--bg)] text-[var(--text-light)] border border-[var(--border)]'
+                }`}>
+                  {step > s.num ? '✓' : s.num}
                 </div>
-                <div className="form-group">
-                  <label>Teléfono</label>
-                  <input name="phone" value={shipping.phone} onChange={handleShippingChange} type="tel" />
-                </div>
-                <div className="form-group">
-                  <label>País *</label>
-                  <select name="country" value={shipping.country} onChange={handleShippingChange} required>
-                    {COUNTRIES.map(c => (
-                      <option key={c.code} value={c.code}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Código postal * {zipLoading && '(buscando...)'}</label>
-                  <input
-                    name="zip"
-                    value={shipping.zip}
-                    onChange={handleZipChange}
-                    onBlur={handleZipBlur}
-                    required
-                    placeholder="Ingresa tu código postal"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Estado / Provincia *</label>
-                  <input name="state" value={shipping.state} onChange={handleShippingChange} required />
-                </div>
-                <div className="form-group">
-                  <label>Ciudad *</label>
-                  <input name="city" value={shipping.city} onChange={handleShippingChange} required />
-                </div>
-                <div className="form-group full-width">
-                  <label>Dirección *</label>
-                  <input name="address" value={shipping.address} onChange={handleShippingChange} required placeholder="Calle, número, colonia..." />
-                </div>
+                <span className="text-xs font-bold uppercase tracking-wider hidden sm:inline">
+                  {s.label}
+                </span>
               </div>
-              <div className="cart-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowShipping(false)}>Atrás</button>
-                <button type="submit" className="btn btn-primary">
-                  Obtener cotización de envío
-                </button>
-              </div>
-              <div className="alert-warning">
-                <svg className="warning-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                  <line x1="12" y1="9" x2="12" y2="13"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                <span>Verifica que tu dirección sea correcta. Los pedidos enviados a una dirección incorrecta no pueden ser reembolsados.</span>
-              </div>
-            </form>
-          ) : (
-            /* Step 3: Select shipping method & pay */
-            <div className="shipping-form">
-              <h3>Envío a</h3>
-
-              {/* Selector de direcciones guardadas */}
-              {savedAddresses.length > 1 && (
-                <div className="address-selector" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  {savedAddresses.map(addr => {
-                    const isSelected = shipping.name === addr.name && shipping.address === addr.address && shipping.zip === addr.zip;
-                    return (
-                      <button
-                        key={addr.id}
-                        type="button"
-                        className={`btn btn-sm${isSelected ? ' btn-primary' : ''}`}
-                        onClick={() => { selectSavedAddress(addr); setSelectedQuote(null); }}
-                      >
-                        {addr.label}
-                      </button>
-                    );
-                  })}
-                </div>
+              {idx < 2 && (
+                <div className={`flex-1 h-px mx-2 ${step > s.num ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'}`} />
               )}
+            </div>
+          ))}
+        </div>
 
-              <div className="shipping-address-summary" style={{
-                padding: '0.75rem 1rem',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                marginBottom: '1rem',
-                fontSize: '0.88rem',
-                color: 'var(--text-secondary)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '0.5rem',
-              }}>
-                <div>
-                  <strong style={{ color: 'var(--text)' }}>{shipping.name}</strong><br />
-                  {shipping.address}, {shipping.city}, {shipping.state} {shipping.zip}<br />
-                  {COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country}
-                  {shipping.phone && <><br />{shipping.phone}</>}
+        {error && (
+          <div className="mb-6 bg-red-500/10 text-[var(--danger)] border border-red-500/20 rounded-xl p-4 text-sm flex items-center gap-3">
+            <X size={18} className="flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ===== COLUMNA IZQUIERDA - PRODUCTOS ===== */}
+          <div className="lg:col-span-2">
+            {/* Cabecera de productos (solo desktop) */}
+            <div className="hidden md:grid grid-cols-[80px,1fr,120px,100px,40px] gap-4 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[var(--text-light)] border-b border-[var(--border)]">
+              <span>Producto</span>
+              <span></span>
+              <span className="text-center">Cantidad</span>
+              <span className="text-right">Subtotal</span>
+              <span></span>
+            </div>
+
+            <div className="space-y-3 mt-4 md:mt-0">
+              {items.map(item => (
+                <CartItem key={item.id} item={item} />
+              ))}
+            </div>
+
+            {/* Frase motivacional */}
+            <div className="mt-6 p-4 bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl">
+              <p className="text-sm text-[var(--text-secondary)] flex items-center gap-2">
+                <span className="text-xl">💪</span>
+                Cada prenda es una extensión de tu actitud. Completa tu compra.
+              </p>
+            </div>
+
+            {/* Botón volver */}
+            <button
+              onClick={() => navigate('/products')}
+              className="mt-4 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors flex items-center gap-2"
+            >
+              ← Seguir comprando
+            </button>
+          </div>
+
+          {/* ===== COLUMNA DERECHA - RESUMEN ===== */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-24">
+              <div className="bg-[var(--card-bg)] border border-[var(--border)] rounded-2xl p-6 shadow-[var(--shadow-sm)]">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--text)] mb-4">
+                  Resumen del Pedido
+                </h3>
+
+                {/* Productos resumen */}
+                <div className="space-y-2 max-h-32 overflow-y-auto mb-4 pr-1">
+                  {items.map(item => (
+                    <div key={item.id} className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)] truncate">
+                        {item.name} <span className="text-[var(--text-light)]">×{item.quantity}</span>
+                      </span>
+                      <span className="text-[var(--text)] font-medium">
+                        {formatPrice(item.price_cents * item.quantity)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', whiteSpace: 'nowrap' }}
-                  onClick={handleBackToAddress}
-                >
-                  Editar
-                </button>
-              </div>
 
-              <ShippingQuotes
-                shipping={shipping}
-                selected={selectedQuote}
-                onSelect={setSelectedQuote}
-              />
+                <div className="border-t border-[var(--border)] pt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--text-secondary)]">Subtotal</span>
+                    <span className="text-[var(--text)] font-medium">{formatPrice(cartTotal)}</span>
+                  </div>
 
-              <div className="cart-actions" style={{ marginTop: '1rem' }}>
-                <button type="button" className="btn btn-outline" onClick={handleBackToAddress}>Atrás</button>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  disabled={!selectedQuote || checkoutLoading}
-                  onClick={handleCheckout}
-                >
-                  {checkoutLoading ? 'Redirigiendo...' : `Confirmar y pagar ${selectedQuote ? formatPrice(grandTotal) : ''}`}
-                </button>
+                  {selectedQuote ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)]">
+                        Envío ({selectedQuote.carrier})
+                      </span>
+                      <span className="text-[var(--text)] font-medium">
+                        {formatPrice(selectedQuote.priceCents)}
+                      </span>
+                    </div>
+                  ) : step === 1 ? (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[var(--text-secondary)]">Envío</span>
+                      <span className="text-[var(--text-light)] italic">Calculado después</span>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="border-t-2 border-[var(--border)] pt-4 mt-2">
+                  <div className="flex justify-between text-lg font-black">
+                    <span className="text-[var(--text)]">Total</span>
+                    <span className="text-[var(--accent)]">
+                      {formatPrice(selectedQuote ? grandTotal : cartTotal)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ===== STEP 1: CARRITO ===== */}
+                {step === 1 && (
+                  <div className="mt-6 space-y-3">
+                    <button
+                      onClick={clearCart}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-[var(--border)] hover:border-[var(--danger)] text-[var(--text-secondary)] hover:text-[var(--danger)] font-semibold text-sm rounded-xl transition-all"
+                    >
+                      <Trash2 size={16} />
+                      Vaciar carrito
+                    </button>
+                    <button
+                      onClick={handleProceed}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-sm rounded-xl transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_25px_rgba(232,93,4,0.3)]"
+                    >
+                      Proceder al pago
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
+                )}
+
+                {/* ===== STEP 2: DIRECCIÓN DE ENVÍO ===== */}
+                {step === 2 && (
+                  <div className="mt-6">
+                    <form onSubmit={handleGetQuotes} className="space-y-4">
+                      <div className="grid grid-cols-1 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                            Nombre completo *
+                          </label>
+                          <input
+                            name="name"
+                            value={shipping.name}
+                            onChange={handleShippingChange}
+                            required
+                            className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                            placeholder="Tu nombre"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                            Teléfono
+                          </label>
+                          <input
+                            name="phone"
+                            value={shipping.phone}
+                            onChange={handleShippingChange}
+                            type="tel"
+                            className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                            placeholder="Ej: 662 123 4567"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                              País *
+                            </label>
+                            <select
+                              name="country"
+                              value={shipping.country}
+                              onChange={handleShippingChange}
+                              required
+                              className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                            >
+                              {COUNTRIES.map(c => (
+                                <option key={c.code} value={c.code}>{c.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                              Código postal * {zipLoading && '🔍'}
+                            </label>
+                            <input
+                              name="zip"
+                              value={shipping.zip}
+                              onChange={handleZipChange}
+                              onBlur={handleZipBlur}
+                              required
+                              className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                              placeholder="83000"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                              Estado *
+                            </label>
+                            <input
+                              name="state"
+                              value={shipping.state}
+                              onChange={handleShippingChange}
+                              required
+                              className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                              placeholder="Sonora"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                              Ciudad *
+                            </label>
+                            <input
+                              name="city"
+                              value={shipping.city}
+                              onChange={handleShippingChange}
+                              required
+                              className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                              placeholder="Hermosillo"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-light)] mb-1">
+                            Dirección *
+                          </label>
+                          <input
+                            name="address"
+                            value={shipping.address}
+                            onChange={handleShippingChange}
+                            required
+                            className="w-full px-4 py-2.5 bg-[var(--bg)] border border-[var(--border)] rounded-xl text-sm text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                            placeholder="Calle, número, colonia..."
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleBackToCart}
+                          className="flex-1 px-4 py-2.5 border border-[var(--border)] hover:border-[var(--text)] text-[var(--text-secondary)] hover:text-[var(--text)] font-semibold text-sm rounded-xl transition-all"
+                        >
+                          Atrás
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex-1 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-sm rounded-xl transition-all hover:-translate-y-0.5"
+                        >
+                          Calcular envío
+                        </button>
+                      </div>
+                    </form>
+
+                    {/* Aviso */}
+                    <div className="mt-4 p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl flex items-start gap-2.5 text-xs text-[var(--text-secondary)]">
+                      <Shield size={16} className="text-[var(--accent)] flex-shrink-0 mt-0.5" />
+                      <span>Verifica que tu dirección sea correcta. Los pedidos enviados a una dirección incorrecta no pueden ser reembolsados.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* ===== STEP 3: SELECCIONAR ENVÍO ===== */}
+                {step === 3 && (
+                  <div className="mt-6">
+                    {/* Dirección resumen */}
+                    <div className="p-3 bg-[var(--bg)] border border-[var(--border)] rounded-xl mb-4">
+                      <div className="flex justify-between items-start">
+                        <div className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                          <strong className="text-[var(--text)]">{shipping.name}</strong>
+                          <br />
+                          {shipping.address}
+                          <br />
+                          {shipping.city}, {shipping.state} {shipping.zip}
+                          <br />
+                          {COUNTRIES.find(c => c.code === shipping.country)?.name || shipping.country}
+                        </div>
+                        <button
+                          onClick={handleBackToAddress}
+                          className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+                        >
+                          Editar
+                        </button>
+                      </div>
+                    </div>
+
+                    <ShippingQuotes
+                      shipping={shipping}
+                      selected={selectedQuote}
+                      onSelect={setSelectedQuote}
+                    />
+
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={handleBackToAddress}
+                        className="flex-1 px-4 py-2.5 border border-[var(--border)] hover:border-[var(--text)] text-[var(--text-secondary)] hover:text-[var(--text)] font-semibold text-sm rounded-xl transition-all"
+                      >
+                        Atrás
+                      </button>
+                      <button
+                        onClick={handleCheckout}
+                        disabled={!selectedQuote || checkoutLoading}
+                        className="flex-1 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-sm rounded-xl transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                      >
+                        {checkoutLoading ? (
+                          'Procesando...'
+                        ) : (
+                          <>
+                            Pagar {selectedQuote && formatPrice(grandTotal)}
+                            <ArrowRight size={16} className="inline ml-2" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ===== GARANTÍA ===== */}
+                <div className="mt-6 pt-4 border-t border-[var(--border)] flex items-center justify-center gap-2 text-[10px] font-medium text-[var(--text-light)] uppercase tracking-wider">
+                  <Shield size={14} />
+                  Envíos seguros a todo México
+                  <span className="w-px h-4 bg-[var(--border)]" />
+                  <Truck size={14} />
+                  Garantía de devolución
+                </div>
               </div>
             </div>
-          )}
-
-          {/* Mensaje de garantía */}
-          <div className="cart-guarantee">
-            <span>🔒</span>
-            <span>Envíos seguros a todo México. Garantía de devolución.</span>
           </div>
         </div>
       </div>

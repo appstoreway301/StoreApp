@@ -18,7 +18,13 @@ export function CartProvider({ children }) {
     setLoading(true);
     try {
       const { data } = await api.get('/cart');
-      setItems(data.items);
+      // ✅ Asegurar que la imagen de la variante se use si existe
+      const itemsWithImages = data.items.map(item => ({
+        ...item,
+        image_url: item.variant_image_url || item.product_image_url || null
+      }));
+      console.log('📦 Carrito desde backend:', itemsWithImages);
+      setItems(itemsWithImages);
     } catch {
       setItems([]);
     } finally {
@@ -30,7 +36,6 @@ export function CartProvider({ children }) {
     fetchCart();
   }, [fetchCart]);
 
-  // Sync guest cart to server on login
   useEffect(() => {
     if (isAuthenticated) {
       const stored = localStorage.getItem('guestCart');
@@ -39,7 +44,11 @@ export function CartProvider({ children }) {
         if (guestItems.length > 0) {
           Promise.all(
             guestItems.map(item =>
-              api.post('/cart', { productId: item.product_id, quantity: item.quantity }).catch(() => {})
+              api.post('/cart', {
+                productId: item.product_id,
+                quantity: item.quantity,
+                variantId: item.variantId
+              }).catch(() => {})
             )
           ).then(() => {
             localStorage.removeItem('guestCart');
@@ -53,33 +62,68 @@ export function CartProvider({ children }) {
   }, [isAuthenticated]);
 
   function saveGuestCart(newItems) {
+    console.log('💾 Guardando guest cart:', newItems);
     localStorage.setItem('guestCart', JSON.stringify(newItems));
     setItems(newItems);
   }
 
   async function addItem(product, quantity = 1) {
+    console.log('🛒 Agregando al carrito - PRODUCTO:', product);
+    console.log('🛒 variantId:', product.variantId);
+    console.log('🛒 size:', product.size);
+    console.log('🛒 color:', product.color);
+
+    const imageToUse = product.variantImage || product.image_url || product.image || null;
+
+    // 🔧 IMPORTANTE: Asegurar que variantId sea un número o null
+    const variantId = product.variantId ? Number(product.variantId) : null;
+
     if (!isAuthenticated) {
-      const existing = items.find(i => i.product_id === product.id);
+      const existing = items.find(i => i.product_id === product.id && i.variantId === variantId);
       let newItems;
       if (existing) {
         newItems = items.map(i =>
-          i.product_id === product.id ? { ...i, quantity: i.quantity + quantity } : i
+          i.product_id === product.id && i.variantId === variantId
+            ? { ...i, quantity: i.quantity + quantity }
+            : i
         );
       } else {
         newItems = [...items, {
           id: Date.now(),
           product_id: product.id,
+          variantId: variantId,
           name: product.name,
           price_cents: product.price_cents,
-          image_url: product.image_url,
+          image_url: imageToUse,
+          size: product.size || null,
+          color: product.color || null,
           quantity,
         }];
       }
       saveGuestCart(newItems);
       return;
     }
-    const { data } = await api.post('/cart', { productId: product.id, quantity });
-    setItems(data.items);
+
+    try {
+      // 🔧 Asegurar que el cuerpo de la petición tenga los campos correctos
+      const payload = {
+        productId: Number(product.id),
+        quantity: Number(quantity),
+        variantId: variantId // 👈 Enviar variantId correctamente
+      };
+      console.log('📤 Enviando al backend:', payload);
+
+      const { data } = await api.post('/cart', payload);
+      // ✅ Asegurar que la imagen de la variante se use si existe
+      const itemsWithImages = data.items.map(item => ({
+        ...item,
+        image_url: item.variant_image_url || item.product_image_url || null
+      }));
+      console.log('✅ Carrito actualizado:', itemsWithImages);
+      setItems(itemsWithImages);
+    } catch (error) {
+      console.error('❌ Error al agregar al carrito:', error);
+    }
   }
 
   async function updateQuantity(itemId, quantity) {
@@ -91,7 +135,11 @@ export function CartProvider({ children }) {
       return;
     }
     const { data } = await api.put(`/cart/${itemId}`, { quantity });
-    setItems(data.items);
+    const itemsWithImages = data.items.map(item => ({
+      ...item,
+      image_url: item.variant_image_url || item.product_image_url || null
+    }));
+    setItems(itemsWithImages);
   }
 
   async function removeItem(itemId) {
@@ -101,7 +149,11 @@ export function CartProvider({ children }) {
       return;
     }
     const { data } = await api.delete(`/cart/${itemId}`);
-    setItems(data.items);
+    const itemsWithImages = data.items.map(item => ({
+      ...item,
+      image_url: item.variant_image_url || item.product_image_url || null
+    }));
+    setItems(itemsWithImages);
   }
 
   async function clearCart() {

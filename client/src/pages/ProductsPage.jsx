@@ -3,15 +3,6 @@ import { Search, SlidersHorizontal, X } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import api from '../api/client';
 
-const CATEGORIES = [
-  { value: 'all', label: 'TODAS' },
-  { value: 'camisetas', label: 'CAMISETAS' },
-  { value: 'hoodies', label: 'HOODIES' },
-  { value: 'gorras', label: 'GORRAS' },
-  { value: 'pantalones', label: 'PANTALONES' },
-  { value: 'accesorios', label: 'ACCESORIOS' },
-];
-
 const SORT_OPTIONS = [
   { value: 'newest', label: 'MÁS RECIENTES' },
   { value: 'price-asc', label: 'PRECIO: MENOR A MAYOR' },
@@ -20,24 +11,32 @@ const SORT_OPTIONS = [
 ];
 
 export default function ProductsPage() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialCat = urlParams.get('cat') || 'all';
-
   const [products, setProducts] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState(initialCat);
+  const [category, setCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    api.get('/products')
-      .then(({ data }) => {
-        setProducts(data.products || []);
+    Promise.all([
+      api.get('/products'),
+      api.get('/products/categories')
+    ])
+      .then(([productsRes, categoriesRes]) => {
+        setProducts(productsRes.data.products || []);
+        // Categorías desde el backend
+        const cats = categoriesRes.data.categories || [];
+        setAllCategories([
+          { id: 'all', name: 'TODAS' },
+          ...cats.map(c => ({ id: String(c.id), name: c.name.toUpperCase() }))
+        ]);
       })
       .catch(() => {
         setProducts([]);
+        setAllCategories([{ id: 'all', name: 'TODAS' }]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -46,7 +45,9 @@ export default function ProductsPage() {
     let result = [...products];
 
     if (category !== 'all') {
-      result = result.filter(p => p.category === category);
+      result = result.filter(p => 
+        (p.categories || []).some(c => String(c.id) === category)
+      );
     }
 
     if (search.trim()) {
@@ -107,13 +108,13 @@ export default function ProductsPage() {
 
           {/* Category Tabs (Desktop) */}
           <div className="products-categories">
-            {CATEGORIES.map((cat) => (
+            {allCategories.map((cat) => (
               <button
-                key={cat.value}
-                onClick={() => setCategory(cat.value)}
-                className={`products-category-btn ${category === cat.value ? 'active' : ''}`}
+                key={cat.id}
+                onClick={() => setCategory(cat.id)}
+                className={`products-category-btn ${category === cat.id ? 'active' : ''}`}
               >
-                {cat.label}
+                {cat.name}
               </button>
             ))}
           </div>
@@ -142,13 +143,13 @@ export default function ProductsPage() {
         {/* Mobile Filters Panel */}
         {showFilters && (
           <div className="products-filters-mobile-panel">
-            {CATEGORIES.map((cat) => (
+            {allCategories.map((cat) => (
               <button
-                key={cat.value}
-                onClick={() => { setCategory(cat.value); setShowFilters(false); }}
-                className={`products-mobile-category-btn ${category === cat.value ? 'active' : ''}`}
+                key={cat.id}
+                onClick={() => { setCategory(cat.id); setShowFilters(false); }}
+                className={`products-mobile-category-btn ${category === cat.id ? 'active' : ''}`}
               >
-                {cat.label}
+                {cat.name}
               </button>
             ))}
           </div>

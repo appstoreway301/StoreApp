@@ -87,7 +87,7 @@ function MarqueeBanner() {
 }
 
 // ==========================================================================
-// SECCIÓN 3: Productos Destacados
+// SECCIÓN 3: Productos Destacados (AHORA USA /products/featured)
 // ==========================================================================
 function FeaturedProducts({ products, isLoading }) {
   return (
@@ -95,7 +95,7 @@ function FeaturedProducts({ products, isLoading }) {
       <div className="home-featured-container">
         <div className="home-featured-header">
           <div>
-            <span className="home-featured-badge">SELECCIÓN</span>
+            <span className="home-featured-badge">⭐ SELECCIÓN</span>
             <h2 className="home-featured-title">
               PIEZAS <span>DESTACADAS</span>
             </h2>
@@ -124,7 +124,7 @@ function FeaturedProducts({ products, isLoading }) {
           </div>
         ) : (
           <div className="home-featured-empty">
-            <p>Próximamente nuevas piezas</p>
+            <p>Próximamente nuevas piezas destacadas</p>
           </div>
         )}
       </div>
@@ -202,17 +202,18 @@ function AboutSection() {
 // COMPONENTE PRINCIPAL: HomePage
 // ==========================================================================
 export default function HomePage() {
-  const [products, setProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api.get('/products')
+    // 👈 AHORA usa /products/featured para obtener solo los destacados
+    api.get('/products/featured?limit=8')
       .then(({ data }) => {
-        setProducts(data.products || []);
+        setFeaturedProducts(data.products || []);
       })
       .catch(() => {
-        setProducts([]);
+        setFeaturedProducts([]);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -221,7 +222,7 @@ export default function HomePage() {
     <div>
       <HeroSection />
       <MarqueeBanner />
-      <FeaturedProducts products={products} isLoading={loading} />
+      <FeaturedProducts products={featuredProducts} isLoading={loading} />
       <AboutSection />
     </div>
   );

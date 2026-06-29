@@ -18,22 +18,53 @@ export default function CartItem({ item }) {
     updateQuantity(item.id, item.quantity + 1);
   }
 
+  const imageUrl = item.image_url ? resolveImageUrl(item.image_url) : null;
+
+  console.log('🛒 Item del carrito:', item); // 👈 LOG para depurar
+
   return (
     <div className="cart-item">
-      {/* Imagen */}
-      <img 
-        src={resolveImageUrl(item.image_url)} 
-        alt={item.name} 
-        className="cart-item-img" 
-      />
-
-      {/* Información */}
-      <div className="cart-item-info">
-        <h4>{item.name}</h4>
-        <p className="cart-item-price">{formatPrice(item.price_cents)}</p>
+      <div className="cart-item-image-wrapper">
+        {imageUrl ? (
+          <img 
+            src={imageUrl} 
+            alt={item.name} 
+            className="cart-item-img" 
+          />
+        ) : (
+          <div className="cart-item-img-placeholder">
+            <span>📦</span>
+          </div>
+        )}
       </div>
 
-      {/* Selector de cantidad (mejorado) */}
+      <div className="cart-item-info">
+        <h4 className="cart-item-name">{item.name}</h4>
+        <p className="cart-item-price">{formatPrice(item.price_cents)}</p>
+        
+        {/* 👇 Mostrar talla y color si existen */}
+        {item.size || item.color ? (
+          <div className="cart-item-variant">
+            {item.size && (
+              <span className="cart-item-size">
+                <strong>Talla:</strong> {item.size}
+              </span>
+            )}
+            {item.color && (
+              <span className="cart-item-color">
+                <strong>Color:</strong> {item.color}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div className="cart-item-variant">
+            <span className="cart-item-size" style={{ borderColor: 'transparent', background: 'transparent', color: 'var(--text-light)' }}>
+              Sin variante
+            </span>
+          </div>
+        )}
+      </div>
+
       <div className="cart-item-actions">
         <button
           className="cart-qty-btn"
@@ -53,12 +84,10 @@ export default function CartItem({ item }) {
         </button>
       </div>
 
-      {/* Subtotal */}
       <div className="cart-item-total">
         {formatPrice(item.price_cents * item.quantity)}
       </div>
 
-      {/* Botón eliminar (con ícono) */}
       <button
         className="cart-item-remove"
         onClick={() => removeItem(item.id)}
@@ -69,4 +98,4 @@ export default function CartItem({ item }) {
       </button>
     </div>
   );
-}
+} 

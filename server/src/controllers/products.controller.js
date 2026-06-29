@@ -41,4 +41,21 @@ async function listCategories(req, res, next) {
   }
 }
 
-module.exports = { list, getById, listCategories };
+// 👇 NUEVO: Obtener productos destacados
+async function getFeatured(req, res, next) {
+  try {
+    const limit = parseInt(req.query.limit) || 8;
+    const products = await ProductModel.findFeatured(limit);
+    const ids = products.map(p => p.id);
+    const categoriesMap = await CategoryModel.findByProductIds(ids);
+    const result = products.map(p => ({
+      ...p,
+      categories: categoriesMap[p.id] || [],
+    }));
+    res.json({ products: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { list, getById, listCategories, getFeatured };

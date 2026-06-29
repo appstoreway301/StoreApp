@@ -1,22 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, MapPin, Truck, Tags, Menu, LogOut, Sun, Bell, ChevronDown } from "lucide-react";
+import { LayoutDashboard, Package, MapPin, Truck, Tags, Menu, LogOut, Bell, ChevronDown, User, Settings } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
+import { resolveImageUrl } from "../utils/imageUrl";
 import logoMonogram from "../assets/Frente.png";
 
 const navItems = [
-  { label: "Dashboard", path: "/admin", icon: LayoutDashboard, short: "DASHBOARD" },
-  { label: "Productos", path: "/admin/products", icon: Package, short: "PRODUCTOS" },
+  { label: "Dashboard", path: "/admin", icon: LayoutDashboard, short: "DASH" },
+  { label: "Productos", path: "/admin/products", icon: Package, short: "PROD" },
   { label: "Stock", path: "/admin/stock", icon: Tags, short: "STOCK" },
-  { label: "Sucursales", path: "/admin/branches", icon: MapPin, short: "SUCURSALES" },
-  { label: "Envíos", path: "/admin/shipments", icon: Truck, short: "ENVÍOS" },
+  { label: "Sucursales", path: "/admin/branches", icon: MapPin, short: "SUC" },
+  { label: "Envíos", path: "/admin/shipments", icon: Truck, short: "ENV" },
 ];
 
 /* ---------- Header ---------- */
 function AdminHeader() {
   const { user } = useAuth();
-  const { dark, toggle } = useTheme();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const avatarUrl = user?.avatar_url ? resolveImageUrl(user.avatar_url) : null;
+  const userInitial = user?.name?.charAt(0).toUpperCase() || "A";
 
   return (
     <header
@@ -59,16 +73,7 @@ function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-4">
-        <button
-          onClick={toggle}
-          className="transition-colors"
-          style={{ color: "#666" }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = "#e85d04")}
-          onMouseLeave={(e) => (e.currentTarget.style.color = "#666")}
-        >
-          {dark ? <Sun className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        </button>
-
+        {/* 👇 NOTIFICACIONES */}
         <button className="relative transition-colors" style={{ color: "#666" }}>
           <Bell className="w-4 h-4" />
           <span
@@ -79,22 +84,125 @@ function AdminHeader() {
           </span>
         </button>
 
-        <div className="flex items-center gap-2 cursor-pointer pl-3 border-l" style={{ borderColor: "#1a1a1a" }}>
+        {/* 👇 USER DROPDOWN */}
+        <div className="relative" ref={dropdownRef}>
           <div
-            className="w-7 h-7 flex items-center justify-center rounded-full font-display font-black text-xs"
-            style={{ background: "#e85d04", color: "#fff" }}
+            className="flex items-center gap-2 cursor-pointer pl-3 border-l"
+            style={{ borderColor: "#1a1a1a" }}
+            onClick={() => setDropdownOpen(!dropdownOpen)}
           >
-            {user?.name?.charAt(0).toUpperCase() || "A"}
+            <div
+              className="w-7 h-7 flex items-center justify-center rounded-full font-display font-black text-xs overflow-hidden"
+              style={{ background: avatarUrl ? "transparent" : "#e85d04", color: "#fff" }}
+            >
+              {avatarUrl ? (
+                <img 
+                  src={avatarUrl} 
+                  alt={user?.name || "Usuario"} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                userInitial
+              )}
+            </div>
+            <span className="text-xs font-semibold text-white">{user?.name || "Administrador"}</span>
+            <ChevronDown
+              className="w-3 h-3 transition-transform duration-200"
+              style={{ color: "#666", transform: dropdownOpen ? "rotate(180deg)" : "rotate(0)" }}
+            />
           </div>
-          <span className="text-xs font-semibold text-white">{user?.name || "Administrador"}</span>
-          <ChevronDown className="w-3 h-3" style={{ color: "#666" }} />
+
+          {dropdownOpen && (
+            <div
+              className="absolute right-0 mt-2 w-56 rounded-lg overflow-hidden"
+              style={{
+                background: "#171717",
+                border: "1px solid #222",
+                boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+              }}
+            >
+              <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "#222" }}>
+                <div
+                  className="w-10 h-10 flex items-center justify-center rounded-full font-display font-black text-sm overflow-hidden flex-shrink-0"
+                  style={{ background: avatarUrl ? "transparent" : "#e85d04", color: "#fff" }}
+                >
+                  {avatarUrl ? (
+                    <img 
+                      src={avatarUrl} 
+                      alt={user?.name || "Usuario"} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    userInitial
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-white truncate">{user?.name || "Administrador"}</p>
+                  <p className="text-xs truncate" style={{ color: "#666" }}>{user?.email || "admin@kongmontoya.com"}</p>
+                </div>
+              </div>
+              <Link
+                to="/profile"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                style={{ color: "#a0a0a0" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#222";
+                  e.currentTarget.style.color = "#ffffff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#a0a0a0";
+                }}
+              >
+                <User size={16} />
+                Mi Perfil
+              </Link>
+              <Link
+                to="/admin"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors"
+                style={{ color: "#a0a0a0" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "#222";
+                  e.currentTarget.style.color = "#ffffff";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "#a0a0a0";
+                }}
+              >
+                <Settings size={16} />
+                Panel Admin
+              </Link>
+              <div className="border-t" style={{ borderColor: "#222" }}>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("accessToken");
+                    localStorage.removeItem("refreshToken");
+                    localStorage.removeItem("user");
+                    window.location.href = "/login";
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm transition-colors text-left"
+                  style={{ color: "#ef4444" }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(239,68,68,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  <LogOut size={16} />
+                  Cerrar Sesión
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
 
-/* ---------- Footer (SIN MARQUEE) ---------- */
+/* ---------- Footer ---------- */
 function AdminFooter() {
   const currentYear = new Date().getFullYear();
 
@@ -222,27 +330,33 @@ function AdminFooter() {
 /* ---------- Layout ---------- */
 export default function AdminLayout() {
   const location = useLocation();
-  const { logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // 👇 FORZAR MODO OSCURO PARA EL ADMIN
+  useEffect(() => {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', 'dark');
+    
+    return () => {
+      if (currentTheme) {
+        document.documentElement.setAttribute('data-theme', currentTheme);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    };
+  }, []);
 
   const isActive = (path) => {
     if (path === "/admin") return location.pathname === "/admin";
     return location.pathname.startsWith(path);
   };
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = "/login";
-  };
-
   return (
     <div className="min-h-screen flex" style={{ background: "#0a0a0a" }}>
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 bg-black/70 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside
         className={`fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col transition-transform duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
@@ -255,7 +369,6 @@ export default function AdminLayout() {
           className="flex items-center justify-center h-16 border-b"
           style={{ borderColor: "#1a1a1a" }}
         >
-          {/* CAMBIADO: K por logo */}
           <img 
             src={logoMonogram} 
             alt="Kong Montoya" 
@@ -293,7 +406,12 @@ export default function AdminLayout() {
 
         <div className="flex items-center justify-center pb-5 border-t" style={{ borderColor: "#1a1a1a" }}>
           <button
-            onClick={handleLogout}
+            onClick={() => {
+              localStorage.removeItem("accessToken");
+              localStorage.removeItem("refreshToken");
+              localStorage.removeItem("user");
+              window.location.href = "/login";
+            }}
             title="Cerrar sesión"
             className="mt-4 flex items-center justify-center w-10 h-10 transition-colors"
             style={{ color: "#444" }}
@@ -305,11 +423,9 @@ export default function AdminLayout() {
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen" style={{ background: "#0a0a0a" }}>
         <AdminHeader />
 
-        {/* Mobile header */}
         <header
           className="lg:hidden sticky top-0 z-30 px-4 h-14 flex items-center justify-between border-b"
           style={{ background: "#0d0d0d", borderColor: "#1a1a1a" }}

@@ -14,12 +14,16 @@ const ordersRoutes = require('./routes/orders.routes');
 const adminRoutes = require('./routes/admin.routes');
 const shippingRoutes = require('./routes/shipping.routes');
 const addressRoutes = require('./routes/address.routes');
+const variantRoutes = require('./routes/variants.routes');
+const sizeRoutes = require('./routes/sizes.routes');
+const colorRoutes = require('./routes/colors.routes');
 
 const app = express();
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+
 const ALLOWED_ORIGINS = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https:\/\/[a-z0-9-]+\.trycloudflare\.com$/,
@@ -27,7 +31,6 @@ const ALLOWED_ORIGINS = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // Allow requests with no origin (same-origin, mobile apps, curl in dev)
     if (!origin) return callback(null, true);
     const allowed = ALLOWED_ORIGINS.some(pattern => pattern.test(origin));
     if (allowed) return callback(null, true);
@@ -35,16 +38,14 @@ app.use(cors({
   },
   credentials: true,
 }));
+
 app.use(cookieParser());
 
-// Stripe webhook needs raw body — must be before express.json()
 app.use('/api/checkout/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 
-// Serve uploaded images
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/cart', cartRoutes);
@@ -53,8 +54,10 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/addresses', addressRoutes);
+app.use('/api/variants', variantRoutes);
+app.use('/api/admin/sizes', sizeRoutes);
+app.use('/api/admin/colors', colorRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });

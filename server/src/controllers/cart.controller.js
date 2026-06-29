@@ -12,16 +12,21 @@ async function getCart(req, res, next) {
 
 async function addItem(req, res, next) {
   try {
-    const { productId, quantity } = req.body;
+    const { productId, quantity, variantId } = req.body;
+
+    console.log('📦 [BACKEND] addItem recibido:', { productId, quantity, variantId });
 
     const product = await ProductModel.findById(productId);
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Verificar stock disponible considerando lo que ya hay en el carrito
+    // Verificar stock
     const currentCart = await CartModel.getByUserId(req.userId);
-    const existingItem = currentCart.find(item => item.product_id === productId);
+    const existingItem = currentCart.find(item => 
+      item.product_id === productId && 
+      (item.variant_id === variantId || (item.variant_id === null && variantId === null))
+    );
     const currentQty = existingItem ? existingItem.quantity : 0;
     if (currentQty + quantity > product.stock) {
       return res.status(400).json({
@@ -29,8 +34,10 @@ async function addItem(req, res, next) {
       });
     }
 
-    await CartModel.addItem(req.userId, productId, quantity);
+    // ✅ PASAR variantId al modelo
+    await CartModel.addItem(req.userId, productId, quantity, variantId || null);
     const items = await CartModel.getByUserId(req.userId);
+    console.log('📦 [BACKEND] Carrito actualizado:', items);
     res.json({ items });
   } catch (err) {
     next(err);
@@ -42,7 +49,6 @@ async function updateItem(req, res, next) {
     const { quantity } = req.body;
     const itemId = Number(req.params.itemId);
 
-    // Verificar stock antes de actualizar
     const currentCart = await CartModel.getByUserId(req.userId);
     const cartItem = currentCart.find(item => item.id === itemId);
     if (cartItem && quantity > cartItem.stock) {

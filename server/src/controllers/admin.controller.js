@@ -3,21 +3,25 @@ const ProductModel = require('../models/product.model');
 const ProductImageModel = require('../models/product-image.model');
 const CategoryModel = require('../models/category.model');
 const BranchModel = require('../models/branch.model');
-
-// --- Products ---
+const SizeModel = require('../models/size.model');
+const ColorModel = require('../models/color.model');
 
 async function getProducts(req, res, next) {
   try {
     const products = await ProductModel.findAllAdmin();
     const ids = products.map(p => p.id);
-    const [imagesMap, categoriesMap] = await Promise.all([
+    const [imagesMap, categoriesMap, sizesMap, colorsMap] = await Promise.all([
       ProductImageModel.findByProductIds(ids),
       CategoryModel.findByProductIds(ids),
+      SizeModel.findByProductIds(ids),
+      ColorModel.findByProductIds(ids),
     ]);
     const result = products.map(p => ({
       ...p,
       images: imagesMap[p.id] || [],
       categories: categoriesMap[p.id] || [],
+      sizes: sizesMap[p.id] || [],
+      colors: colorsMap[p.id] || [],
     }));
     res.json({ products: result });
   } catch (err) {
@@ -27,7 +31,11 @@ async function getProducts(req, res, next) {
 
 async function createProduct(req, res, next) {
   try {
-    const { name, description, price_cents, image_url, category, stock, category_ids, weight_kg } = req.body;
+    const { 
+      name, description, price_cents, image_url, category, 
+      stock, category_ids, weight_kg, featured,
+      size_ids, color_ids 
+    } = req.body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ error: 'Product name is required' });
@@ -47,10 +55,19 @@ async function createProduct(req, res, next) {
       category: category || '',
       stock: stock || 0,
       weightKg: weight_kg || 1.0,
+      featured: featured || false,
     });
 
     if (category_ids && category_ids.length > 0) {
       await CategoryModel.setProductCategories(id, category_ids);
+    }
+
+    if (size_ids && size_ids.length > 0) {
+      await SizeModel.setProductSizes(id, size_ids);
+    }
+
+    if (color_ids && color_ids.length > 0) {
+      await ColorModel.setProductColors(id, color_ids);
     }
 
     const product = await ProductModel.findByIdAdmin(id);
@@ -59,6 +76,8 @@ async function createProduct(req, res, next) {
         ...product,
         images: [],
         categories: await CategoryModel.findByProductId(id),
+        sizes: await SizeModel.findByProductId(id),
+        colors: await ColorModel.findByProductId(id),
       },
     });
   } catch (err) {
@@ -74,7 +93,11 @@ async function updateProduct(req, res, next) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const { name, description, price_cents, image_url, category, stock, active, category_ids, weight_kg } = req.body;
+    const { 
+      name, description, price_cents, image_url, category, 
+      stock, active, category_ids, weight_kg, featured,
+      size_ids, color_ids 
+    } = req.body;
 
     if (price_cents !== undefined && (typeof price_cents !== 'number' || !Number.isInteger(price_cents) || price_cents < 0)) {
       return res.status(400).json({ error: 'price_cents must be a non-negative integer' });
@@ -82,6 +105,7 @@ async function updateProduct(req, res, next) {
     if (stock !== undefined && (typeof stock !== 'number' || !Number.isInteger(stock) || stock < 0)) {
       return res.status(400).json({ error: 'stock must be a non-negative integer' });
     }
+
     await ProductModel.update(id, {
       name: name ?? existing.name,
       description: description ?? existing.description,
@@ -91,16 +115,27 @@ async function updateProduct(req, res, next) {
       stock: stock ?? existing.stock,
       active: active ?? existing.active,
       weightKg: weight_kg ?? existing.weight_kg ?? 1.0,
+      featured: featured ?? existing.featured,
     });
 
     if (category_ids !== undefined) {
       await CategoryModel.setProductCategories(id, category_ids || []);
     }
 
+    if (size_ids !== undefined) {
+      await SizeModel.setProductSizes(id, size_ids || []);
+    }
+
+    if (color_ids !== undefined) {
+      await ColorModel.setProductColors(id, color_ids || []);
+    }
+
     const product = await ProductModel.findByIdAdmin(id);
     const images = await ProductImageModel.findByProductId(id);
     const categories = await CategoryModel.findByProductId(id);
-    res.json({ product: { ...product, images, categories } });
+    const sizes = await SizeModel.findByProductId(id);
+    const colors = await ColorModel.findByProductId(id);
+    res.json({ product: { ...product, images, categories, sizes, colors } });
   } catch (err) {
     next(err);
   }
@@ -118,8 +153,6 @@ async function deleteProduct(req, res, next) {
     next(err);
   }
 }
-
-// --- Product Images ---
 
 async function addProductImage(req, res, next) {
   try {
@@ -152,8 +185,6 @@ async function removeProductImage(req, res, next) {
     next(err);
   }
 }
-
-// --- Categories ---
 
 async function getCategories(req, res, next) {
   try {
@@ -215,8 +246,6 @@ async function deleteCategory(req, res, next) {
   }
 }
 
-// --- Stock & Sales Dashboard ---
-
 async function getStockDashboard(req, res, next) {
   try {
     const { rows: products } = await pool.query(
@@ -270,8 +299,6 @@ async function getStockDashboard(req, res, next) {
     next(err);
   }
 }
-
-// --- Branches (Sucursales) ---
 
 async function getBranches(req, res, next) {
   try {
